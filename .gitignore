@@ -3,8 +3,7 @@ __pycache__/
 *$py.class
 *.so
 .env
-data/*.db
-data/*.sqlite
+data/
 temp/
 logs/
 .vscode/
