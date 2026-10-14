@@ -52,7 +52,7 @@
       </div>
     </aside>
 
-    <!-- Main Chat Container -->
+    <!-- Main Chat Area -->
     <main class="chat-main">
       <!-- Top Navbar -->
       <header class="top-nav">
@@ -60,11 +60,18 @@
           <button class="btn-icon" id="btn-toggle-sidebar" title="切換側邊欄">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
           </button>
+          
+          <!-- Toggle Stage Button (SillyTavern Style) -->
+          <button class="btn-icon btn-nav-stage-toggle active" id="btn-toggle-stage" title="切換角色立繪展示區">
+            <span>🎭 角色立繪</span>
+          </button>
+
           <div class="active-persona-badge" id="active-persona-badge">
             <span class="badge-avatar" id="nav-persona-avatar">🤖</span>
             <span class="badge-name" id="nav-persona-name">萬能助理</span>
           </div>
         </div>
+
         <div class="nav-right">
           <div class="model-indicator" id="model-indicator" title="點擊設定更換模型">
             <span class="indicator-dot"></span>
@@ -76,73 +83,128 @@
         </div>
       </header>
 
-      <!-- Message History Area -->
-      <div class="messages-container" id="messages-container">
-        <!-- Welcome Screen if no messages -->
-        <div class="welcome-screen" id="welcome-screen">
-          <div class="welcome-icon">💬</div>
-          <h2>有什麼我可以協助您的嗎？</h2>
-          <p class="welcome-subtitle">支援本地 Ollama 離線模型與雲端 API，具備語音輸入與微軟 Edge-TTS 自然朗讀</p>
-          <div class="prompt-suggestions">
-            <button class="suggestion-card" data-prompt="請用繁體中文介紹什麼是 RAG（檢索增強生成）？">
-              <span class="card-icon">💡</span>
-              <span class="card-text">解釋什麼是 RAG 技術？</span>
-            </button>
-            <button class="suggestion-card" data-prompt="請幫我寫一個 Python 範例：使用 FastAPI 實作串流輸出 (SSE)">
-              <span class="card-icon">⚡</span>
-              <span class="card-text">Python FastAPI 串流範例</span>
-            </button>
-            <button class="suggestion-card" data-prompt="如果想設計一款卡牌遊戲的 Combo 連攜系統，有哪些經典的設計方向？">
-              <span class="card-icon">⚔️</span>
-              <span class="card-text">卡牌 Combo 機制設計探討</span>
-            </button>
+      <!-- SillyTavern Workspace: Character Stage (Left) + Chat Window (Right) -->
+      <div class="chat-workspace" id="chat-workspace">
+        
+        <!-- Character Sprite Stage (Left Side) -->
+        <section class="character-stage" id="character-stage">
+          <div class="sprite-stage-inner">
+            <div class="sprite-container" id="sprite-container">
+              <!-- Actual Sprite Image -->
+              <img id="character-sprite" class="sprite-img mode-half-body hidden" src="" alt="角色立繪">
+
+              <!-- Empty State / Placeholder -->
+              <div class="sprite-empty-state" id="sprite-empty-state">
+                <div class="empty-avatar-circle" id="empty-avatar-circle">🤖</div>
+                <p class="empty-title" id="empty-sprite-title">尚未配置角色立繪</p>
+                <button class="btn-stage-upload" id="btn-empty-upload">
+                  <span>📁 上傳立繪圖片</span>
+                </button>
+                <span class="empty-tip">支援 PNG / JPG / WebP 透明底圖</span>
+              </div>
+
+              <!-- Speaking Aura Ring -->
+              <div class="speaking-aura" id="speaking-aura"></div>
+            </div>
+
+            <!-- Stage Floating Controls Bar -->
+            <div class="stage-floating-bar">
+              <div class="stage-nameplate">
+                <span id="stage-persona-avatar">🤖</span>
+                <span id="stage-persona-name">萬能助理</span>
+              </div>
+
+              <div class="stage-control-buttons">
+                <!-- Half Body vs Full Body Switcher -->
+                <button class="btn-stage-control" id="btn-toggle-display-mode" title="切換 上半身(第一人稱) / 全身形象">
+                  <span id="display-mode-icon">👤</span>
+                  <span id="display-mode-label">上半身</span>
+                </button>
+
+                <!-- Change Image Button -->
+                <button class="btn-stage-control" id="btn-change-sprite" title="上傳 / 更換立繪圖片">
+                  <span>🖼️ 換立繪</span>
+                </button>
+
+                <!-- Hidden Sprite File Input -->
+                <input type="file" id="sprite-file-input" accept="image/*" style="display:none;">
+              </div>
+            </div>
           </div>
-        </div>
+        </section>
 
-        <div class="message-list" id="message-list">
-          <!-- Messages will be injected here -->
-        </div>
-      </div>
+        <!-- Chat Dialogue Panel (Right Side) -->
+        <section class="chat-dialogue-panel" id="chat-dialogue-panel">
+          <!-- Message History Area -->
+          <div class="messages-container" id="messages-container">
+            <!-- Welcome Screen if no messages -->
+            <div class="welcome-screen" id="welcome-screen">
+              <div class="welcome-icon">💬</div>
+              <h2>有什麼我可以協助您的嗎？</h2>
+              <p class="welcome-subtitle">支援自訂角色立繪（上半身/全身）、本地 Ollama 離線模型與雲端 API，具備語音輸入與微軟 Edge-TTS 朗讀</p>
+              <div class="prompt-suggestions">
+                <button class="suggestion-card" data-prompt="請用繁體中文介紹什麼是 RAG（檢索增強生成）？">
+                  <span class="card-icon">💡</span>
+                  <span class="card-text">解釋什麼是 RAG 技術？</span>
+                </button>
+                <button class="suggestion-card" data-prompt="請幫我寫一個 Python 範例：使用 FastAPI 實作串流輸出 (SSE)">
+                  <span class="card-icon">⚡</span>
+                  <span class="card-text">Python FastAPI 串流範例</span>
+                </button>
+                <button class="suggestion-card" data-prompt="如果想設計一款卡牌遊戲的 Combo 連攜系統，有哪些經典的設計方向？">
+                  <span class="card-icon">⚔️</span>
+                  <span class="card-text">卡牌 Combo 機制設計探討</span>
+                </button>
+              </div>
+            </div>
 
-      <!-- Input Area -->
-      <div class="input-area">
-        <div class="input-box-wrapper">
-          <textarea 
-            id="chat-input" 
-            placeholder="輸入訊息... (Enter 發送，Shift + Enter 換行)" 
-            rows="1"
-          ></textarea>
-          
-          <div class="input-actions">
-            <!-- STT Voice Input Button -->
-            <button class="btn-action-icon" id="btn-mic" title="語音輸入 (STT)">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
-                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-                <line x1="12" y1="19" x2="12" y2="23"></line>
-                <line x1="8" y1="23" x2="16" y2="23"></line>
-              </svg>
-            </button>
-
-            <!-- Send Button -->
-            <button class="btn-action-icon btn-send" id="btn-send" title="發送訊息">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="22" y1="2" x2="11" y2="13"></line>
-                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-              </svg>
-            </button>
-
-            <!-- Stop Generating Button (Hidden by default) -->
-            <button class="btn-action-icon btn-stop hidden" id="btn-stop" title="停止生成">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <rect x="6" y="6" width="12" height="12" rx="2"></rect>
-              </svg>
-            </button>
+            <div class="message-list" id="message-list">
+              <!-- Messages will be injected here -->
+            </div>
           </div>
-        </div>
-        <div class="input-footer-hint">
-          <span id="stt-status">語音輸入已就緒</span> • 點擊 AI 回覆旁的 🔊 即可使用自然中文朗讀
-        </div>
+
+          <!-- Input Area -->
+          <div class="input-area">
+            <div class="input-box-wrapper">
+              <textarea 
+                id="chat-input" 
+                placeholder="輸入訊息... (Enter 發送，Shift + Enter 換行)" 
+                rows="1"
+              ></textarea>
+              
+              <div class="input-actions">
+                <!-- STT Voice Input Button -->
+                <button class="btn-action-icon" id="btn-mic" title="語音輸入 (STT)">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                    <line x1="12" y1="19" x2="12" y2="23"></line>
+                    <line x1="8" y1="23" x2="16" y2="23"></line>
+                  </svg>
+                </button>
+
+                <!-- Send Button -->
+                <button class="btn-action-icon btn-send" id="btn-send" title="發送訊息">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                  </svg>
+                </button>
+
+                <!-- Stop Generating Button (Hidden by default) -->
+                <button class="btn-action-icon btn-stop hidden" id="btn-stop" title="停止生成">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <rect x="6" y="6" width="12" height="12" rx="2"></rect>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div class="input-footer-hint">
+              <span id="stt-status">語音輸入已就緒</span> • 點擊 AI 回覆旁的 🔊 即可使用自然中文朗讀
+            </div>
+          </div>
+        </section>
+
       </div>
     </main>
   </div>
@@ -162,7 +224,7 @@
         <div class="settings-tabs">
           <button class="tab-btn active" data-tab="tab-model">模型來源</button>
           <button class="tab-btn" data-tab="tab-voice">語音朗讀 (TTS)</button>
-          <button class="tab-btn" data-tab="tab-persona">自訂角色</button>
+          <button class="tab-btn" data-tab="tab-persona">自訂角色與形象</button>
         </div>
 
         <!-- Tab 1: Model Config -->
@@ -238,6 +300,13 @@
             <input type="text" id="persona-form-avatar" placeholder="例如：🌸" style="max-width: 100px;">
           </div>
           <div class="form-group">
+            <label>預設立繪顯示模式</label>
+            <select id="persona-form-mode" class="custom-select">
+              <option value="half_body">上半身（第一人稱對話視角）</option>
+              <option value="full_body">全身形象展示</option>
+            </select>
+          </div>
+          <div class="form-group">
             <label>角色描述 (簡介)</label>
             <input type="text" id="persona-form-desc" placeholder="例如：日常日語口語訓練">
           </div>
@@ -258,4 +327,3 @@
   <script src="/static/js/app.js"></script>
 </body>
 </html>
-

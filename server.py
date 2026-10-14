@@ -2,7 +2,7 @@ import os
 import json
 import uuid
 from typing import Dict, Any, Optional
-from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi import FastAPI, HTTPException, Request, Response, UploadFile, File, Form
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -21,7 +21,8 @@ from core.personas import (
     load_personas,
     get_persona,
     upsert_persona,
-    delete_persona
+    delete_persona,
+    update_persona_avatar
 )
 from core.llm_provider import (
     get_ollama_models,
@@ -73,8 +74,12 @@ init_db()
 
 app = FastAPI(title="AI Chat App")
 
-# Serve static files
+AVATARS_DIR = os.path.join(DATA_DIR, "avatars")
+os.makedirs(AVATARS_DIR, exist_ok=True)
+
+# Serve static files & uploaded avatars
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+app.mount("/avatars", StaticFiles(directory=AVATARS_DIR), name="avatars")
 
 @app.get("/", response_class=HTMLResponse)
 async def get_index():
@@ -112,6 +117,34 @@ async def save_persona_item(req: Request):
 @app.delete("/api/personas/{persona_id}")
 async def remove_persona_item(persona_id: str):
     return delete_persona(persona_id)
+
+@app.post("/api/personas/{persona_id}/avatar")
+async def upload_persona_avatar_file(
+    persona_id: str,
+    file: UploadFile = File(...),
+    display_mode: Optional[str] = Form(None)
+):
+    os.makedirs(AVATARS_DIR, exist_ok=True)
+    ext = os.path.splitext(file.filename)[1].lower() if file.filename else ".png"
+    if not ext or ext not in [".png", ".jpg", ".jpeg", ".webp", ".gif", ".jfif"]:
+        ext = ".png"
+    filename = f"{persona_id}_{uuid.uuid4().hex[:8]}{ext}"
+    filepath = os.path.join(AVATARS_DIR, filename)
+    content = await file.read()
+    with open(filepath, "wb") as f:
+        f.write(content)
+    image_url = f"/avatars/{filename}"
+    updated = update_persona_avatar(persona_id, image_url, display_mode)
+    return updated
+
+@app.patch("/api/personas/{persona_id}/display_mode")
+async def patch_persona_display_mode(persona_id: str, req: Request):
+    data = await req.json()
+    mode = data.get("display_mode", "half_body")
+    p = get_persona(persona_id)
+    updated = update_persona_avatar(persona_id, image_url=p.get("image_url", ""), display_mode=mode)
+    return updated
+
 
 # Session APIs
 class CreateSessionReq(BaseModel):

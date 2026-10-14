@@ -10,6 +10,8 @@ DEFAULT_PERSONAS = [
         "id": "assistant",
         "name": "萬能助理",
         "avatar": "🤖",
+        "image_url": "",
+        "display_mode": "half_body",
         "system_prompt": "你是一位親切、聰明、有條理的通用 AI 助理。請用流暢且自然的繁體中文回答使用者的問題，條理分明，重點清晰。",
         "description": "回答各類生活、學術與日常知識問題"
     },
@@ -17,6 +19,8 @@ DEFAULT_PERSONAS = [
         "id": "coder",
         "name": "代碼工程師",
         "avatar": "💻",
+        "image_url": "",
+        "display_mode": "half_body",
         "system_prompt": "你是一位資深的全端軟體架構師與程式設計顧問。請提供高品質、符合最佳實踐（Clean Code）的程式碼範例與解釋，注重健壯性、安全性與效能。回答以繁體中文為主。",
         "description": "專業軟體設計、代碼審查與除錯專家"
     },
@@ -24,6 +28,8 @@ DEFAULT_PERSONAS = [
         "id": "game_designer",
         "name": "遊戲設計顧問",
         "avatar": "⚔️",
+        "image_url": "",
+        "display_mode": "half_body",
         "system_prompt": "你是一位專精於卡牌構築、Rogue-lite、RPG 數值平衡與戰鬥 Combo 連攜機制的資深獨立遊戲企劃師。擅長分析核心迴圈、卡牌協同效應與玩家心流體驗。回答以繁體中文為主。",
         "description": "專注於卡牌機制、連攜技能與遊戲數值設計"
     },
@@ -31,6 +37,8 @@ DEFAULT_PERSONAS = [
         "id": "tsundere_cat",
         "name": "傲嬌貓娘",
         "avatar": "🐱",
+        "image_url": "",
+        "display_mode": "half_body",
         "system_prompt": "你是一隻名叫「咪嚕」的傲嬌貓娘。雖然表面上講話傲嬌、嘴硬不坦率，每句話常帶有「哼！」或「喵~」，但內心其實很在乎主人，並且會非常認真且準確地解答主人的問題！回答以繁體中文為主。",
         "description": "嘴硬心軟的傲嬌性格，回答結尾常帶有喵~"
     },
@@ -38,6 +46,8 @@ DEFAULT_PERSONAS = [
         "id": "english_tutor",
         "name": "英文口說導師",
         "avatar": "🌍",
+        "image_url": "",
+        "display_mode": "half_body",
         "system_prompt": "You are a friendly and encouraging English conversation tutor. Speak in clear, natural English. When the user writes in English, gently point out grammatical improvements or better vocabulary choices in Traditional Chinese (繁體中文), then continue the conversation in English.",
         "description": "練習英語日常會話與文法糾錯"
     }
@@ -52,11 +62,16 @@ def load_personas() -> List[Dict]:
     try:
         with open(PERSONAS_FILE, "r", encoding="utf-8") as f:
             personas = json.load(f)
-            # Ensure default personas exist
+            # Ensure default personas exist and populate missing fields
             existing_ids = {p["id"] for p in personas}
             for default_p in DEFAULT_PERSONAS:
                 if default_p["id"] not in existing_ids:
                     personas.append(default_p)
+            for p in personas:
+                if "image_url" not in p:
+                    p["image_url"] = ""
+                if "display_mode" not in p:
+                    p["display_mode"] = "half_body"
             return personas
     except Exception:
         return DEFAULT_PERSONAS
@@ -73,8 +88,25 @@ def get_persona(persona_id: str) -> Dict:
             return p
     return personas[0] if personas else DEFAULT_PERSONAS[0]
 
+def update_persona_avatar(persona_id: str, image_url: str, display_mode: str = None) -> Dict:
+    personas = load_personas()
+    target = None
+    for p in personas:
+        if p["id"] == persona_id:
+            p["image_url"] = image_url
+            if display_mode:
+                p["display_mode"] = display_mode
+            target = p
+            break
+    save_personas(personas)
+    return target or get_persona(persona_id)
+
 def upsert_persona(persona_data: Dict) -> List[Dict]:
     personas = load_personas()
+    if "image_url" not in persona_data:
+        persona_data["image_url"] = ""
+    if "display_mode" not in persona_data:
+        persona_data["display_mode"] = "half_body"
     updated = False
     for i, p in enumerate(personas):
         if p["id"] == persona_data["id"]:

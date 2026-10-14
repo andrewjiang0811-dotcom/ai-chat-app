@@ -1,7 +1,7 @@
-/* AI Chat App - Modern Dark Glass Theme */
+/* AI Chat App - Modern Dark Glass & SillyTavern Visual Stage Theme */
 :root {
-  --bg-dark: #0f172a;
-  --bg-sidebar: #111827;
+  --bg-dark: #0b1120;
+  --bg-sidebar: #0f172a;
   --bg-card: #1e293b;
   --bg-card-hover: #283548;
   --bg-input: #1e293b;
@@ -9,8 +9,8 @@
   --text-muted: #94a3b8;
   --primary: #3b82f6;
   --primary-hover: #2563eb;
-  --primary-glow: rgba(59, 130, 246, 0.25);
-  --accent: #6366f1;
+  --primary-glow: rgba(59, 130, 246, 0.35);
+  --accent: #8b5cf6;
   --border: #334155;
   --danger: #ef4444;
   --success: #10b981;
@@ -18,7 +18,7 @@
   --radius-md: 12px;
   --radius-lg: 16px;
   --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang TC", "Microsoft JhengHei", sans-serif;
-  --sidebar-width: 270px;
+  --sidebar-width: 260px;
 }
 
 * {
@@ -36,7 +36,7 @@ body {
   overflow: hidden;
 }
 
-/* App Layout */
+/* Layout */
 .app-layout {
   display: flex;
   height: 100vh;
@@ -52,7 +52,7 @@ body {
   display: flex;
   flex-direction: column;
   transition: transform 0.3s ease;
-  z-index: 20;
+  z-index: 30;
 }
 
 .sidebar.collapsed {
@@ -83,9 +83,8 @@ body {
 }
 
 .brand-title {
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 700;
-  letter-spacing: 0.5px;
   color: #fff;
 }
 
@@ -218,11 +217,10 @@ body {
   background: transparent;
   border: none;
   color: var(--text-muted);
-  font-size: 13.5px;
+  font-size: 13px;
   padding: 8px 10px;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  text-align: left;
   transition: all 0.15s;
 }
 
@@ -231,39 +229,40 @@ body {
   color: var(--text-main);
 }
 
-/* Chat Main */
+/* Chat Main Layout */
 .chat-main {
   flex: 1;
   display: flex;
   flex-direction: column;
   height: 100vh;
   position: relative;
-  background: radial-gradient(circle at 50% 0%, #1e293b 0%, #0f172a 70%);
+  background: #0b1120;
+  overflow: hidden;
 }
 
 .top-nav {
-  height: 58px;
-  padding: 0 20px;
+  height: 56px;
+  padding: 0 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(15, 23, 42, 0.7);
-  backdrop-filter: blur(12px);
-  z-index: 10;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(14px);
+  z-index: 20;
 }
 
 .nav-left, .nav-right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .btn-icon {
   background: transparent;
   border: 1px solid transparent;
   color: var(--text-muted);
-  padding: 7px;
+  padding: 6px 8px;
   border-radius: var(--radius-sm);
   cursor: pointer;
   display: flex;
@@ -278,27 +277,39 @@ body {
   border-color: var(--border);
 }
 
+.btn-nav-stage-toggle {
+  background: rgba(139, 92, 246, 0.15);
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  color: #c4b5fd;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 5px 10px;
+}
+
+.btn-nav-stage-toggle.active {
+  background: rgba(139, 92, 246, 0.3);
+  color: #fff;
+  border-color: #8b5cf6;
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.25);
+}
+
 .active-persona-badge {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   background: var(--bg-card);
-  padding: 5px 12px;
+  padding: 4px 10px;
   border-radius: 20px;
   border: 1px solid var(--border);
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 600;
-}
-
-.badge-avatar {
-  font-size: 16px;
 }
 
 .model-indicator {
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 5px 12px;
+  gap: 6px;
+  padding: 4px 10px;
   background: rgba(59, 130, 246, 0.1);
   border: 1px solid rgba(59, 130, 246, 0.25);
   border-radius: 20px;
@@ -312,7 +323,233 @@ body {
   height: 7px;
   border-radius: 50%;
   background-color: var(--success);
-  box-shadow: 0 0 8px var(--success);
+  box-shadow: 0 0 6px var(--success);
+}
+
+/* SillyTavern Workspace: Stage (Left) + Chat (Right) */
+.chat-workspace {
+  display: flex;
+  flex: 1;
+  height: calc(100vh - 56px);
+  overflow: hidden;
+  position: relative;
+}
+
+/* Character Stage (Visual Novel / SillyTavern Style) */
+.character-stage {
+  flex: 0 0 420px;
+  max-width: 45%;
+  min-width: 320px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  background: radial-gradient(circle at 50% 50%, rgba(30, 41, 59, 0.6) 0%, rgba(11, 17, 32, 0.95) 100%);
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  user-select: none;
+}
+
+.character-stage.collapsed {
+  flex: 0 0 0 !important;
+  min-width: 0 !important;
+  max-width: 0 !important;
+  border-right: none;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sprite-stage-inner {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.sprite-container {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+}
+
+/* Sprite Image (Half-body vs Full-body) */
+.sprite-img {
+  max-width: 100%;
+  user-select: none;
+  pointer-events: none;
+  filter: drop-shadow(0 10px 25px rgba(0, 0, 0, 0.6));
+  transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), filter 0.3s ease;
+}
+
+/* Mode: Half Body (第一人稱半身對話) */
+.sprite-img.mode-half-body {
+  height: 125%;
+  max-height: 130%;
+  width: auto;
+  object-fit: cover;
+  object-position: top center;
+  transform: scale(1.35) translateY(12%);
+}
+
+/* Mode: Full Body (全身形象) */
+.sprite-img.mode-full-body {
+  height: 92%;
+  max-height: 94%;
+  width: auto;
+  object-fit: contain;
+  object-position: bottom center;
+  transform: scale(1) translateY(0);
+}
+
+/* Speaking Aura & Animation */
+.sprite-container.speaking .sprite-img {
+  filter: drop-shadow(0 0 20px rgba(59, 130, 246, 0.6)) drop-shadow(0 10px 25px rgba(0, 0, 0, 0.6));
+  animation: spriteBreathing 2.2s ease-in-out infinite alternate;
+}
+
+@keyframes spriteBreathing {
+  0% { transform: scale(var(--sprite-scale, 1.35)) translateY(12%); }
+  50% { transform: scale(calc(var(--sprite-scale, 1.35) * 1.018)) translateY(10%); }
+  100% { transform: scale(var(--sprite-scale, 1.35)) translateY(12%); }
+}
+
+.sprite-img.mode-full-body.speaking {
+  animation: spriteBreathingFull 2.2s ease-in-out infinite alternate;
+}
+
+@keyframes spriteBreathingFull {
+  0% { transform: scale(1) translateY(0); }
+  50% { transform: scale(1.02) translateY(-6px); }
+  100% { transform: scale(1) translateY(0); }
+}
+
+/* Sprite Empty State */
+.sprite-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: auto;
+  padding: 30px 20px;
+  text-align: center;
+}
+
+.empty-avatar-circle {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(139, 92, 246, 0.2));
+  border: 2px dashed rgba(139, 92, 246, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 42px;
+  margin-bottom: 16px;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.empty-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-main);
+  margin-bottom: 14px;
+}
+
+.btn-stage-upload {
+  padding: 9px 18px;
+  background: var(--primary);
+  border: none;
+  border-radius: var(--radius-md);
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px var(--primary-glow);
+}
+
+.btn-stage-upload:hover {
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+}
+
+.empty-tip {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 10px;
+}
+
+/* Stage Bottom Floating Bar */
+.stage-floating-bar {
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  z-index: 10;
+}
+
+.stage-nameplate {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.stage-control-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-stage-control {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-main);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.2s;
+}
+
+.btn-stage-control:hover {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+  box-shadow: 0 2px 8px var(--primary-glow);
+}
+
+/* Chat Dialogue Panel (Right Side) */
+.chat-dialogue-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 0;
+  background: radial-gradient(circle at 60% 0%, rgba(30, 41, 59, 0.4) 0%, rgba(11, 17, 32, 0.8) 100%);
+  position: relative;
 }
 
 /* Messages Area */
@@ -326,27 +563,27 @@ body {
 
 .welcome-screen {
   margin: auto;
-  max-width: 600px;
+  max-width: 580px;
   text-align: center;
-  padding: 40px 20px;
+  padding: 30px 16px;
 }
 
 .welcome-icon {
-  font-size: 48px;
-  margin-bottom: 16px;
+  font-size: 44px;
+  margin-bottom: 14px;
 }
 
 .welcome-screen h2 {
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 700;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .welcome-subtitle {
-  font-size: 14px;
+  font-size: 13.5px;
   color: var(--text-muted);
   line-height: 1.6;
-  margin-bottom: 30px;
+  margin-bottom: 26px;
 }
 
 .prompt-suggestions {
@@ -359,7 +596,7 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 14px 18px;
+  padding: 12px 16px;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -367,7 +604,7 @@ body {
   text-align: left;
   cursor: pointer;
   transition: all 0.2s;
-  font-size: 14px;
+  font-size: 13.5px;
 }
 
 .suggestion-card:hover {
@@ -379,8 +616,8 @@ body {
 .message-list {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  max-width: 860px;
+  gap: 18px;
+  max-width: 820px;
   width: 100%;
   margin: 0 auto;
 }
@@ -388,7 +625,7 @@ body {
 /* Message Item */
 .message-row {
   display: flex;
-  gap: 14px;
+  gap: 12px;
   width: 100%;
   animation: fadeIn 0.25s ease forwards;
 }
@@ -416,8 +653,8 @@ body {
 }
 
 .msg-bubble {
-  max-width: 80%;
-  padding: 12px 18px;
+  max-width: 82%;
+  padding: 12px 16px;
   border-radius: var(--radius-lg);
   font-size: 14.5px;
   line-height: 1.65;
@@ -436,10 +673,10 @@ body {
   border: 1px solid var(--border);
   color: var(--text-main);
   border-bottom-left-radius: 4px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
 }
 
-/* Message Bubble Tools / Controls */
+/* Message Bubble Tools */
 .msg-toolbar {
   display: flex;
   align-items: center;
@@ -468,7 +705,7 @@ body {
   color: #fff;
 }
 
-/* Markdown styling inside assistant bubble */
+/* Markdown in bubbles */
 .msg-bubble pre {
   margin: 10px 0;
   border-radius: var(--radius-sm);
@@ -479,7 +716,7 @@ body {
 
 .msg-bubble code {
   font-family: Consolas, Monaco, monospace;
-  font-size: 13.5px;
+  font-size: 13px;
 }
 
 .msg-bubble p {
@@ -492,14 +729,14 @@ body {
 
 /* Input Area */
 .input-area {
-  padding: 16px 20px 20px;
+  padding: 14px 20px 18px;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
 .input-box-wrapper {
-  max-width: 860px;
+  max-width: 820px;
   width: 100%;
   background: var(--bg-input);
   border: 1px solid var(--border);
@@ -508,7 +745,7 @@ body {
   display: flex;
   align-items: flex-end;
   gap: 10px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
@@ -571,7 +808,6 @@ body {
   color: #fff;
 }
 
-/* Mic pulse when active */
 .btn-action-icon.recording {
   color: var(--danger);
   background: rgba(239, 68, 68, 0.2);
@@ -761,3 +997,21 @@ body {
   display: none !important;
 }
 
+/* Responsive adjustments */
+@media (max-width: 900px) {
+  .character-stage {
+    flex: 0 0 280px;
+    min-width: 240px;
+  }
+}
+
+@media (max-width: 720px) {
+  .character-stage {
+    position: absolute;
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    z-index: 15;
+    background: rgba(11, 17, 32, 0.95);
+  }
+}
