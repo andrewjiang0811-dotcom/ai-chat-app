@@ -241,3 +241,4 @@ async def chat_stream(session_id: str, req: SendMessageReq):
         yield "data: {\"type\": \"done\"}\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
+

@@ -720,3 +720,4 @@ function escapeHtml(str) {
 function jsonStringify(obj) {
   return JSON.stringify(obj);
 }
+

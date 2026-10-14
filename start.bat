@@ -7,3 +7,4 @@ if errorlevel 1 (
     echo 啟動失敗，請檢查 Python 環境與套件安裝。
     pause
 )
+

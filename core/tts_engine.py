@@ -29,3 +29,4 @@ async def synthesize_speech(text: str, voice: str = DEFAULT_VOICE) -> bytes:
             
     audio_buffer.seek(0)
     return audio_buffer.read()
+

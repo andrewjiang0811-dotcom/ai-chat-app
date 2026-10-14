@@ -171,3 +171,4 @@ async def stream_chat_response(
             yield chunk
     else:
         yield f"❌ 未知的模型提供者：{provider}"
+

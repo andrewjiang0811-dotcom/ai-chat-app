@@ -91,3 +91,4 @@ def delete_persona(persona_id: str) -> List[Dict]:
     personas = [p for p in personas if p["id"] != persona_id]
     save_personas(personas)
     return personas
+

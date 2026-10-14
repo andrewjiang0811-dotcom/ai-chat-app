@@ -104,3 +104,4 @@ def get_messages(session_id: str) -> List[Dict]:
         cursor.execute("SELECT * FROM messages WHERE session_id = ? ORDER BY id ASC", (session_id,))
         rows = cursor.fetchall()
         return [dict(row) for row in rows]
+
