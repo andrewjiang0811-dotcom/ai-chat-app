@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI 智能對話助手</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <!-- Markdown & Code Highlight CDN -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/atom-one-dark.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
+</head>
+<body class="dark-theme">
+  <div class="app-layout">
+    <!-- Left Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="app-brand">
+          <div class="brand-icon">✨</div>
+          <span class="brand-title">AI Chat App</span>
+        </div>
+        <button class="btn-new-chat" id="btn-new-chat">
+          <span class="icon">+</span>
+          <span>新對話</span>
+        </button>
+      </div>
+
+      <!-- Persona Selector in Sidebar -->
+      <div class="persona-section">
+        <label class="section-label">對話角色 (Persona)</label>
+        <div class="persona-selector-wrapper">
+          <select id="persona-select" class="custom-select">
+            <!-- Dynamically populated -->
+          </select>
+        </div>
+      </div>
+
+      <!-- History List -->
+      <div class="sidebar-history">
+        <div class="section-label">歷史紀錄</div>
+        <div class="session-list" id="session-list">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+
+      <!-- Sidebar Footer -->
+      <div class="sidebar-footer">
+        <button class="btn-footer" id="btn-open-settings">
+          <span class="icon">⚙️</span>
+          <span>模型與語音設定</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Chat Container -->
+    <main class="chat-main">
+      <!-- Top Navbar -->
+      <header class="top-nav">
+        <div class="nav-left">
+          <button class="btn-icon" id="btn-toggle-sidebar" title="切換側邊欄">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+          </button>
+          <div class="active-persona-badge" id="active-persona-badge">
+            <span class="badge-avatar" id="nav-persona-avatar">🤖</span>
+            <span class="badge-name" id="nav-persona-name">萬能助理</span>
+          </div>
+        </div>
+        <div class="nav-right">
+          <div class="model-indicator" id="model-indicator" title="點擊設定更換模型">
+            <span class="indicator-dot"></span>
+            <span id="nav-model-name">載入中...</span>
+          </div>
+          <button class="btn-icon" id="btn-clear-chat" title="清空當前對話">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- Message History Area -->
+      <div class="messages-container" id="messages-container">
+        <!-- Welcome Screen if no messages -->
+        <div class="welcome-screen" id="welcome-screen">
+          <div class="welcome-icon">💬</div>
+          <h2>有什麼我可以協助您的嗎？</h2>
+          <p class="welcome-subtitle">支援本地 Ollama 離線模型與雲端 API，具備語音輸入與微軟 Edge-TTS 自然朗讀</p>
+          <div class="prompt-suggestions">
+            <button class="suggestion-card" data-prompt="請用繁體中文介紹什麼是 RAG（檢索增強生成）？">
+              <span class="card-icon">💡</span>
+              <span class="card-text">解釋什麼是 RAG 技術？</span>
+            </button>
+            <button class="suggestion-card" data-prompt="請幫我寫一個 Python 範例：使用 FastAPI 實作串流輸出 (SSE)">
+              <span class="card-icon">⚡</span>
+              <span class="card-text">Python FastAPI 串流範例</span>
+            </button>
+            <button class="suggestion-card" data-prompt="如果想設計一款卡牌遊戲的 Combo 連攜系統，有哪些經典的設計方向？">
+              <span class="card-icon">⚔️</span>
+              <span class="card-text">卡牌 Combo 機制設計探討</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="message-list" id="message-list">
+          <!-- Messages will be injected here -->
+        </div>
+      </div>
+
+      <!-- Input Area -->
+      <div class="input-area">
+        <div class="input-box-wrapper">
+          <textarea 
+            id="chat-input" 
+            placeholder="輸入訊息... (Enter 發送，Shift + Enter 換行)" 
+            rows="1"
+          ></textarea>
+          
+          <div class="input-actions">
+            <!-- STT Voice Input Button -->
+            <button class="btn-action-icon" id="btn-mic" title="語音輸入 (STT)">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                <line x1="12" y1="19" x2="12" y2="23"></line>
+                <line x1="8" y1="23" x2="16" y2="23"></line>
+              </svg>
+            </button>
+
+            <!-- Send Button -->
+            <button class="btn-action-icon btn-send" id="btn-send" title="發送訊息">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </button>
+
+            <!-- Stop Generating Button (Hidden by default) -->
+            <button class="btn-action-icon btn-stop hidden" id="btn-stop" title="停止生成">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <rect x="6" y="6" width="12" height="12" rx="2"></rect>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="input-footer-hint">
+          <span id="stt-status">語音輸入已就緒</span> • 點擊 AI 回覆旁的 🔊 即可使用自然中文朗讀
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Audio Player (Hidden) -->
+  <audio id="tts-audio" style="display:none;"></audio>
+
+  <!-- Settings Modal -->
+  <div class="modal-overlay hidden" id="settings-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>⚙️ 模型與系統設定</h3>
+        <button class="btn-close" id="btn-close-settings">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- Tabs -->
+        <div class="settings-tabs">
+          <button class="tab-btn active" data-tab="tab-model">模型來源</button>
+          <button class="tab-btn" data-tab="tab-voice">語音朗讀 (TTS)</button>
+          <button class="tab-btn" data-tab="tab-persona">自訂角色</button>
+        </div>
+
+        <!-- Tab 1: Model Config -->
+        <div class="tab-content active" id="tab-model">
+          <div class="form-group">
+            <label>AI 模型來源</label>
+            <select id="cfg-provider" class="custom-select">
+              <option value="ollama">本地離線 (Ollama)</option>
+              <option value="gemini">Google Gemini API (雲端高速)</option>
+              <option value="openai">OpenAI / 相容格式 (DeepSeek, Groq 等)</option>
+            </select>
+          </div>
+
+          <!-- Ollama Host -->
+          <div class="form-group provider-option" id="group-ollama">
+            <label>Ollama 伺服器網址</label>
+            <input type="text" id="cfg-ollama-host" placeholder="http://localhost:11434">
+            <div class="field-hint">本機執行 Ollama 服務時的預設位置</div>
+          </div>
+
+          <!-- Gemini Key -->
+          <div class="form-group provider-option hidden" id="group-gemini">
+            <label>Google Gemini API Key</label>
+            <input type="password" id="cfg-gemini-key" placeholder="貼上 AI Studio 取得的 API Key">
+            <div class="field-hint">前往 Google AI Studio 即可免費獲取 API Key</div>
+          </div>
+
+          <!-- OpenAI / Compatible -->
+          <div class="form-group provider-option hidden" id="group-openai">
+            <label>API Key</label>
+            <input type="password" id="cfg-openai-key" placeholder="sk-...">
+            <label style="margin-top: 10px;">Base URL (API 基礎網址)</label>
+            <input type="text" id="cfg-openai-url" placeholder="https://api.openai.com/v1">
+            <div class="field-hint">可支援 DeepSeek (https://api.deepseek.com)、Groq、LM Studio 等相容介面</div>
+          </div>
+
+          <!-- Model Name -->
+          <div class="form-group">
+            <label>指定模型名稱 (Model Name)</label>
+            <div class="model-input-combo">
+              <input type="text" id="cfg-model" placeholder="例如 llama3:latest 或 gemini-2.0-flash">
+              <select id="model-quick-select" class="custom-select" style="max-width: 160px;">
+                <option value="">快速選擇...</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2: Voice TTS Config -->
+        <div class="tab-content" id="tab-voice">
+          <div class="form-group">
+            <label>語音角色 (Microsoft Edge-TTS 高品質神經網絡語音)</label>
+            <select id="cfg-tts-voice" class="custom-select">
+              <!-- Dynamically populated from /api/voices -->
+            </select>
+          </div>
+          <div class="form-checkbox">
+            <label>
+              <input type="checkbox" id="cfg-tts-autoplay">
+              <span>AI 回覆完成後自動朗讀</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Tab 3: Persona Manager -->
+        <div class="tab-content" id="tab-persona">
+          <div class="form-group">
+            <label>角色名稱</label>
+            <input type="text" id="persona-form-name" placeholder="例如：日文老師">
+          </div>
+          <div class="form-group">
+            <label>圖示 (Emoji)</label>
+            <input type="text" id="persona-form-avatar" placeholder="例如：🌸" style="max-width: 100px;">
+          </div>
+          <div class="form-group">
+            <label>角色描述 (簡介)</label>
+            <input type="text" id="persona-form-desc" placeholder="例如：日常日語口語訓練">
+          </div>
+          <div class="form-group">
+            <label>系統提示詞 (System Prompt)</label>
+            <textarea id="persona-form-prompt" rows="4" placeholder="設定這個角色的世界觀、性格、回答風格..."></textarea>
+          </div>
+          <button class="btn-secondary" id="btn-save-new-persona">＋ 新增 / 儲存為新角色</button>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-primary" id="btn-save-settings">儲存設定</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
