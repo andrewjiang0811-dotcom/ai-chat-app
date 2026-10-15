@@ -145,6 +145,14 @@
               <div class="sprite-transform" id="sprite-transform">
                 <!-- Actual Sprite Image -->
                 <img id="character-sprite" class="sprite-img mode-half-body hidden" src="" alt="角色立繪" draggable="false">
+                <!-- Interactive Touch Zones Overlay on Sprite -->
+                <div class="sprite-touch-overlay" id="sprite-touch-overlay"></div>
+              </div>
+
+              <!-- Floating Interactive Reaction Bubble -->
+              <div class="sprite-reaction-bubble hidden" id="sprite-reaction-bubble">
+                <span class="reaction-bubble-icon" id="reaction-bubble-icon">✨</span>
+                <span class="reaction-bubble-text" id="reaction-bubble-text"></span>
               </div>
 
               <!-- Sprite Zoom Controls (滾輪縮放、拖曳平移、雙擊還原) -->
@@ -173,16 +181,41 @@
               <div class="stage-nameplate">
                 <span id="stage-persona-avatar">🤖</span>
                 <span id="stage-persona-name">萬能助理</span>
+                <span class="stage-emotion-badge" id="stage-emotion-badge" title="目前表情狀態">✨ 預設</span>
               </div>
 
               <div class="stage-control-buttons">
+                <!-- Stage Mode Segmented Control: 視角 vs 互動 vs 熱區 -->
+                <div class="stage-mode-group" role="group" aria-label="立繪操作模式">
+                  <button type="button" class="btn-stage-mode active" id="btn-mode-view" title="【視角模式】滑鼠滾輪縮放、按住拖曳平移立繪、雙擊還原視角">
+                    <span>🔍 視角</span>
+                  </button>
+                  <button type="button" class="btn-stage-mode" id="btn-mode-interact" title="【互動模式】點擊立繪頭部、臉部等部位觸發互動對話與表情切換">
+                    <span>🖐️ 互動</span>
+                  </button>
+                  <button type="button" class="btn-stage-mode" id="btn-mode-edit" title="【熱區編輯】檢視或拖曳調整立繪感應範圍">
+                    <span>📐 熱區</span>
+                  </button>
+                </div>
+
+                <!-- Emotions & Zones Manager Button -->
+                <button class="btn-stage-control btn-emotion-mgr" id="btn-open-sprite-manager" title="管理此角色的多表情立繪與觸碰感應熱區">
+                  <span>🎭 表情庫</span>
+                </button>
+
                 <!-- Change Image Button -->
-                <button class="btn-stage-control" id="btn-change-sprite" title="上傳 / 更換立繪圖片">
+                <button class="btn-stage-control" id="btn-change-sprite" title="快速上傳/更換預設立繪圖片">
                   <span>🖼️ 換立繪</span>
                 </button>
 
-                <!-- Hidden Sprite File Input -->
+                <!-- Hide Stage Button -->
+                <button type="button" class="btn-stage-control btn-hide-stage" id="btn-hide-stage" title="不顯示立繪展示區（專注文字對話，可隨時點擊頂部「🎭 角色立繪」重新開啟）">
+                  <span>✕ 隱藏</span>
+                </button>
+
+                <!-- Hidden Sprite File Inputs -->
                 <input type="file" id="sprite-file-input" accept="image/*" style="display:none;">
+                <input type="file" id="emotion-sprite-file-input" accept="image/*" style="display:none;">
               </div>
             </div>
           </div>
@@ -350,7 +383,10 @@
     <div class="modal-card">
       <div class="modal-header">
         <h3>⚙️ 模型與系統設定</h3>
-        <button class="btn-close" id="btn-close-settings">&times;</button>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button type="button" class="btn-header-peek" id="btn-header-peek" title="按住可使設定視窗半透明，看清左側立繪舞台">👀 透視立繪舞台</button>
+          <button class="btn-close" id="btn-close-settings">&times;</button>
+        </div>
       </div>
       <div class="modal-body">
         <!-- Tabs -->
@@ -358,6 +394,7 @@
           <button class="tab-btn active" data-tab="tab-model">模型來源</button>
           <button class="tab-btn" data-tab="tab-voice">語音朗讀 (TTS)</button>
           <button class="tab-btn" data-tab="tab-persona">自訂角色與形象</button>
+          <button class="tab-btn" data-tab="tab-sprite">🎭 立繪表情與熱區</button>
           <button class="tab-btn" data-tab="tab-theme">🎨 背景與主題</button>
           <button class="tab-btn" data-tab="tab-bubble">對話框邊框</button>
         </div>
@@ -389,22 +426,53 @@
 
           <!-- OpenAI / Compatible -->
           <div class="form-group provider-option hidden" id="group-openai">
-            <label>API Key</label>
-            <input type="password" id="cfg-openai-key" placeholder="sk-...">
+            <div class="preset-chips-group">
+              <span class="preset-label">⚡ 常用服務快速填寫：</span>
+              <div class="preset-chips">
+                <button type="button" class="preset-chip active-preset" data-url="https://api.deepseek.com" data-model="deepseek-chat" title="DeepSeek 官方 API (支援對話與深度推理)">DeepSeek</button>
+                <button type="button" class="preset-chip" data-url="https://api.openai.com/v1" data-model="gpt-4o" title="OpenAI 官方 API">OpenAI</button>
+                <button type="button" class="preset-chip" data-url="https://api.groq.com/openai/v1" data-model="llama-3.3-70b-versatile" title="Groq 極速推論雲端">Groq</button>
+                <button type="button" class="preset-chip" data-url="https://openrouter.ai/api/v1" data-model="anthropic/claude-3.5-sonnet" title="OpenRouter 統一聚合平台">OpenRouter</button>
+              </div>
+            </div>
+            <label style="margin-top: 10px;">API Key</label>
+            <input type="password" id="cfg-openai-key" placeholder="貼上 API Key (例如 sk-...)">
             <label style="margin-top: 10px;">Base URL (API 基礎網址)</label>
-            <input type="text" id="cfg-openai-url" placeholder="https://api.openai.com/v1">
-            <div class="field-hint">可支援 DeepSeek (https://api.deepseek.com)、Groq、LM Studio 等相容介面</div>
+            <input type="text" id="cfg-openai-url" placeholder="https://api.deepseek.com">
+            <div class="field-hint">DeepSeek 請填 <code>https://api.deepseek.com</code>，OpenAI 請填 <code>https://api.openai.com/v1</code></div>
           </div>
 
-          <!-- Model Name -->
-          <div class="form-group">
+          <!-- Connection Test Action & Result -->
+          <div class="conn-test-section">
+            <div class="conn-test-row">
+              <button type="button" class="btn-test-conn" id="btn-test-connection">
+                <span class="btn-test-spinner hidden" id="test-spinner">🌀</span>
+                <span class="btn-test-icon" id="test-icon">⚡</span>
+                <span class="btn-test-text" id="test-text">測試連線並取得模型列表</span>
+              </button>
+              <span class="conn-test-hint">點擊即時驗證連線與金鑰，並直接獲取目前帳號可用的所有模型！</span>
+            </div>
+            <div id="connection-test-result" class="conn-result-card hidden"></div>
+          </div>
+
+          <!-- Model Name & Quick Select -->
+          <div class="form-group" style="margin-top: 14px;">
             <label>指定模型名稱 (Model Name)</label>
             <div class="model-input-combo">
-              <input type="text" id="cfg-model" placeholder="例如 llama3:latest 或 gemini-2.0-flash">
-              <select id="model-quick-select" class="custom-select" style="max-width: 160px;">
-                <option value="">快速選擇...</option>
+              <input type="text" id="cfg-model" placeholder="例如 deepseek-chat 或 deepseek-reasoner">
+              <select id="model-quick-select" class="custom-select" style="max-width: 180px;">
+                <option value="">快速選擇模型...</option>
               </select>
             </div>
+          </div>
+
+          <!-- Clickable Model Tags Container -->
+          <div class="model-tags-wrapper hidden" id="model-tags-wrapper">
+            <div class="model-tags-header">
+              <span class="model-tags-title">📋 偵測到的可用模型（點擊直接套用）：</span>
+              <span class="model-tags-count" id="model-tags-count"></span>
+            </div>
+            <div class="model-tags-list" id="model-tags-list"></div>
           </div>
         </div>
 
@@ -443,6 +511,91 @@
             <textarea id="persona-form-prompt" rows="4" placeholder="設定這個角色的世界觀、性格、回答風格..."></textarea>
           </div>
           <button class="btn-secondary" id="btn-save-new-persona">＋ 新增 / 儲存為新角色</button>
+        </div>
+
+        <!-- Tab: Sprite Emotions & Touch Zones Manager -->
+        <div class="tab-content" id="tab-sprite">
+          <div class="sprite-mgr-top">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label>正在編輯的角色</label>
+              <select id="sprite-mgr-persona-select" class="custom-select" style="max-width: 240px;">
+                <!-- Populated dynamically -->
+              </select>
+            </div>
+            <div class="sprite-mgr-subtabs">
+              <button type="button" class="btn-auto-remove-bg" id="btn-auto-remove-bg" title="將此角色的所有立繪白色背景一鍵轉為透明底圖">✨ 一鍵去背 (轉透明)</button>
+              <button type="button" class="subtab-btn active" data-subtab="subtab-emotions">🎭 多表情立繪</button>
+              <button type="button" class="subtab-btn" data-subtab="subtab-zones">📐 觸碰熱區設定</button>
+            </div>
+          </div>
+
+          <!-- Subtab 1: Emotion Sprites -->
+          <div class="subtab-content active" id="subtab-emotions">
+            <div class="emotions-auto-toggle-box">
+              <label class="toggle-label">
+                <input type="checkbox" id="cfg-auto-emotion" checked>
+                <span><strong>自動切換表情：</strong>AI 回覆時，依據回話語氣或關鍵字自動切換立繪表情</span>
+              </label>
+              <div class="auto-emotion-method-wrap">
+                <label style="font-size: 12px; color: var(--text-muted);">判斷方式：</label>
+                <select id="cfg-emotion-method" class="custom-select" style="max-width: 220px; font-size: 12px; padding: 4px 8px;">
+                  <option value="rules">⚡ 智慧語意關鍵字（極速 0 延遲免 Token）</option>
+                  <option value="ai">🧠 串接目前 AI 模型分析（深入理解語氣）</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- In-Modal Live Preview Stage Card -->
+            <div class="sprite-live-preview-panel" id="sprite-live-preview-panel">
+              <div class="sprite-live-preview-viewport">
+                <img id="sprite-live-preview-img" src="" alt="立繪預覽" class="sprite-live-preview-img">
+                <div class="sprite-live-preview-badge" id="sprite-live-preview-badge">✨ 預設 / 平常</div>
+              </div>
+              <div class="sprite-live-preview-meta">
+                <div class="preview-meta-header">
+                  <div class="preview-meta-title" id="sprite-preview-title">🎭 當前預覽：預設 / 平常</div>
+                  <span class="preview-meta-tag" id="sprite-preview-tag">已綠幕去背．全身站姿</span>
+                </div>
+                <div class="preview-meta-pose" id="sprite-preview-pose">
+                  🧍 <strong>站姿風格：</strong><span id="sprite-preview-pose-text">平常優雅站姿</span>
+                </div>
+                <div class="preview-meta-desc" id="sprite-preview-desc">
+                  角色平常的自然全身站姿與親切微笑。已完成純綠幕去背，髮絲與制服完整無瑕疵破圖。
+                </div>
+                <div class="preview-meta-actions">
+                  <button type="button" class="btn-peek-stage" id="btn-peek-stage" title="按住可使視窗變成半透明，直接穿透看清左側舞台">
+                    👀 按住透視左側舞台
+                  </button>
+                  <span class="preview-sync-hint">
+                    <span class="live-dot"></span> 左側舞台即時同步展示中
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div class="emotion-cards-grid" id="emotion-cards-grid">
+              <!-- Dynamically populated 7 emotion cards -->
+            </div>
+          </div>
+
+          <!-- Subtab 2: Touch Zones -->
+          <div class="subtab-content" id="subtab-zones">
+            <div class="zones-intro-box">
+              <div class="zones-intro-text">
+                💡 <strong>觸碰熱區使用說明：</strong>
+                在立繪上設定感應範圍（如頭部、臉頰、手部），切換到【🖐️ 互動模式】時點擊該部位會立即做出表情與台詞反應！若範圍重疊，會依照<strong>優先度數字（1 最優先）</strong>依序判定。
+              </div>
+              <button type="button" class="btn-secondary btn-sm" id="btn-add-touch-zone">＋ 新增感應熱區</button>
+            </div>
+
+            <div class="touch-zones-list" id="touch-zones-list">
+              <!-- Dynamically populated touch zone items -->
+            </div>
+
+            <div style="margin-top: 16px; display: flex; justify-content: flex-end;">
+              <button type="button" class="btn-primary" id="btn-save-touch-zones">💾 儲存觸碰熱區設定</button>
+            </div>
+          </div>
         </div>
 
         <!-- Tab 5: Chat Theme & Background Manager -->

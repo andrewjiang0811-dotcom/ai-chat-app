@@ -3,9 +3,15 @@ __pycache__/
 *$py.class
 *.so
 .env
-data/
 temp/
 logs/
 .vscode/
 .idea/
+*.log
+
+# Sensitive user configs and local database
+data/config.json
+data/*.db
+data/chats/
+
 

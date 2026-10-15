@@ -22,10 +22,19 @@ from core.personas import (
     get_persona,
     upsert_persona,
     delete_persona,
-    update_persona_avatar
+    update_persona_avatar,
+    update_persona_emotion_avatar,
+    delete_persona_emotion_avatar,
+    update_persona_touch_zones,
+    update_persona_emotion_settings,
+    remove_persona_backgrounds
 )
+from core.emotion_analyzer import detect_emotion
 from core.llm_provider import (
     get_ollama_models,
+    get_gemini_models,
+    get_openai_compatible_models,
+    test_provider_connection,
     stream_chat_response
 )
 from core.tts_engine import (
@@ -148,6 +157,62 @@ async def patch_persona_display_mode(persona_id: str, req: Request):
     updated = update_persona_avatar(persona_id, image_url=p.get("image_url", ""), display_mode=mode)
     return updated
 
+# Emotion-Specific Sprites & Touch Zones APIs
+@app.post("/api/personas/{persona_id}/emotions/{emotion}")
+async def upload_persona_emotion_avatar_file(
+    persona_id: str,
+    emotion: str,
+    file: UploadFile = File(...)
+):
+    os.makedirs(AVATARS_DIR, exist_ok=True)
+    ext = os.path.splitext(file.filename)[1].lower() if file.filename else ".png"
+    if not ext or ext not in [".png", ".jpg", ".jpeg", ".webp", ".gif", ".jfif"]:
+        ext = ".png"
+    filename = f"{persona_id}_{emotion}_{uuid.uuid4().hex[:8]}{ext}"
+    filepath = os.path.join(AVATARS_DIR, filename)
+    content = await file.read()
+    with open(filepath, "wb") as f:
+        f.write(content)
+    image_url = f"/avatars/{filename}"
+    updated = update_persona_emotion_avatar(persona_id, emotion, image_url)
+    return updated
+
+@app.delete("/api/personas/{persona_id}/emotions/{emotion}")
+async def remove_persona_emotion_avatar_file(persona_id: str, emotion: str):
+    return delete_persona_emotion_avatar(persona_id, emotion)
+
+@app.put("/api/personas/{persona_id}/touch_zones")
+async def save_persona_touch_zones(persona_id: str, req: Request):
+    data = await req.json()
+    zones = data.get("touch_zones", [])
+    updated = update_persona_touch_zones(persona_id, zones)
+    return updated
+
+@app.patch("/api/personas/{persona_id}/emotion_settings")
+async def patch_persona_emotion_settings(persona_id: str, req: Request):
+    data = await req.json()
+    auto_emotion = data.get("auto_emotion", True)
+    emotion_method = data.get("emotion_method", "rules")
+    updated = update_persona_emotion_settings(persona_id, auto_emotion, emotion_method)
+    return updated
+
+@app.post("/api/personas/{persona_id}/remove_background")
+async def api_remove_persona_background(persona_id: str):
+    updated = remove_persona_backgrounds(persona_id, AVATARS_DIR)
+    return updated
+
+
+class DetectEmotionReq(BaseModel):
+    text: str
+    use_ai: Optional[bool] = False
+
+@app.post("/api/emotion/detect")
+async def api_detect_emotion(req: DetectEmotionReq):
+    config = load_config()
+    result = await detect_emotion(req.text, use_ai=req.use_ai, config=config)
+    return result
+
+
 # Chat Background Upload API
 @app.post("/api/chat/background")
 async def upload_chat_background(file: UploadFile = File(...)):
@@ -201,15 +266,35 @@ async def remove_chat_session(session_id: str):
 async def list_available_models():
     config = load_config()
     ollama_models = await get_ollama_models(config.get("ollama_host", "http://localhost:11434"))
-    
-    popular_gemini = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"]
-    popular_openai = ["gpt-4o", "gpt-4o-mini", "claude-3-5-sonnet", "deepseek-chat"]
+    gemini_models = await get_gemini_models(config.get("gemini_api_key", ""))
+    openai_models = await get_openai_compatible_models(
+        base_url=config.get("openai_base_url", "https://api.openai.com/v1"),
+        api_key=config.get("openai_api_key", "")
+    )
     
     return {
         "ollama": ollama_models,
-        "gemini": popular_gemini,
-        "openai": popular_openai
+        "gemini": gemini_models,
+        "openai": openai_models
     }
+
+class TestConnectionReq(BaseModel):
+    provider: str
+    ollama_host: Optional[str] = "http://localhost:11434"
+    gemini_api_key: Optional[str] = ""
+    openai_api_key: Optional[str] = ""
+    openai_base_url: Optional[str] = "https://api.openai.com/v1"
+
+@app.post("/api/models/test")
+async def test_model_connection(req: TestConnectionReq):
+    result = await test_provider_connection(
+        provider=req.provider,
+        ollama_host=req.ollama_host or "http://localhost:11434",
+        gemini_api_key=req.gemini_api_key or "",
+        openai_api_key=req.openai_api_key or "",
+        openai_base_url=req.openai_base_url or "https://api.openai.com/v1"
+    )
+    return result
 
 # TTS Voice APIs
 @app.get("/api/voices")
@@ -286,6 +371,21 @@ async def chat_stream(session_id: str, req: SendMessageReq):
         full_reply = "".join(collected_chunks)
         if full_reply.strip():
             add_message(session_id, "assistant", full_reply)
+
+            # Auto-detect emotion if enabled
+            if persona.get("auto_emotion", True):
+                try:
+                    use_ai = persona.get("emotion_method") == "ai"
+                    em_data = await detect_emotion(full_reply, use_ai=use_ai, config=config)
+                    payload = json.dumps({
+                        "type": "emotion",
+                        "emotion": em_data["emotion"],
+                        "name": em_data["name"],
+                        "icon": em_data["icon"]
+                    }, ensure_ascii=False)
+                    yield f"data: {payload}\n\n"
+                except Exception:
+                    pass
 
         yield "data: {\"type\": \"done\"}\n\n"
 
