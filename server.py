@@ -75,11 +75,14 @@ init_db()
 app = FastAPI(title="AI Chat App")
 
 AVATARS_DIR = os.path.join(DATA_DIR, "avatars")
+BACKGROUNDS_DIR = os.path.join(DATA_DIR, "backgrounds")
 os.makedirs(AVATARS_DIR, exist_ok=True)
+os.makedirs(BACKGROUNDS_DIR, exist_ok=True)
 
-# Serve static files & uploaded avatars
+# Serve static files & uploaded media
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.mount("/avatars", StaticFiles(directory=AVATARS_DIR), name="avatars")
+app.mount("/backgrounds", StaticFiles(directory=BACKGROUNDS_DIR), name="backgrounds")
 
 @app.get("/", response_class=HTMLResponse)
 async def get_index():
@@ -145,6 +148,19 @@ async def patch_persona_display_mode(persona_id: str, req: Request):
     updated = update_persona_avatar(persona_id, image_url=p.get("image_url", ""), display_mode=mode)
     return updated
 
+# Chat Background Upload API
+@app.post("/api/chat/background")
+async def upload_chat_background(file: UploadFile = File(...)):
+    os.makedirs(BACKGROUNDS_DIR, exist_ok=True)
+    ext = os.path.splitext(file.filename)[1].lower() if file.filename else ".jpg"
+    if not ext or ext not in [".png", ".jpg", ".jpeg", ".webp", ".gif", ".jfif"]:
+        ext = ".jpg"
+    filename = f"bg_{uuid.uuid4().hex[:10]}{ext}"
+    filepath = os.path.join(BACKGROUNDS_DIR, filename)
+    content = await file.read()
+    with open(filepath, "wb") as f:
+        f.write(content)
+    return {"url": f"/backgrounds/{filename}"}
 
 # Session APIs
 class CreateSessionReq(BaseModel):

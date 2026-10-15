@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AI 智能對話助手</title>
   <link rel="stylesheet" href="/static/css/style.css">
+  <!-- Google Fonts: 古典草書、毛筆書法與襯線字型 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Liu+Jian+Mao+Cao&family=Long+Cang&family=Ma+Shan+Zheng&family=Noto+Serif+TC:wght@400;600;900&display=swap" rel="stylesheet">
   <!-- Markdown & Code Highlight CDN -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/atom-one-dark.min.css">
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -12,16 +16,23 @@
 </head>
 <body class="dark-theme">
   <div class="app-layout">
-    <!-- Left Sidebar -->
+    <!-- Left Sidebar (支援完整展開、迷你圖示欄、完全收合) -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
-        <div class="app-brand">
-          <div class="brand-icon">✨</div>
-          <span class="brand-title">AI Chat App</span>
+        <div class="app-brand-row">
+          <div class="app-brand" data-tooltip="AI Chat App">
+            <div class="brand-icon">✨</div>
+            <span class="brand-title">AI Chat App</span>
+          </div>
+          <button class="btn-collapse-sidebar" id="btn-collapse-sidebar" title="收起 / 切換為迷你圖示欄">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+          </button>
         </div>
-        <button class="btn-new-chat" id="btn-new-chat">
+        <button class="btn-new-chat" id="btn-new-chat" data-tooltip="開啟新對話">
           <span class="icon">+</span>
-          <span>新對話</span>
+          <span class="label">新對話</span>
         </button>
       </div>
 
@@ -33,6 +44,10 @@
             <!-- Dynamically populated -->
           </select>
         </div>
+        <!-- Mini Mode Persona Trigger (迷你模式下只顯示角色頭像) -->
+        <button class="mini-persona-btn" id="mini-persona-btn" data-tooltip="切換角色">
+          <span id="mini-persona-avatar">🤖</span>
+        </button>
       </div>
 
       <!-- History List -->
@@ -41,16 +56,34 @@
         <div class="session-list" id="session-list">
           <!-- Dynamically populated -->
         </div>
+        <!-- Mini Mode History Trigger (迷你模式下 hover 展開浮動歷史清單) -->
+        <div class="mini-history-wrapper" id="mini-history-wrapper">
+          <button class="mini-history-trigger" id="mini-history-trigger" data-tooltip="歷史紀錄">
+            <span class="icon">💬</span>
+          </button>
+          <!-- Floating Flyout Panel on hover -->
+          <div class="mini-flyout-panel" id="mini-history-flyout">
+            <div class="flyout-header">
+              <span>歷史紀錄</span>
+            </div>
+            <div class="flyout-session-list" id="flyout-session-list">
+              <!-- Dynamically mirrored -->
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Sidebar Footer -->
       <div class="sidebar-footer">
-        <button class="btn-footer" id="btn-open-settings">
+        <button class="btn-footer" id="btn-open-settings" data-tooltip="模型與語音設定">
           <span class="icon">⚙️</span>
-          <span>模型與語音設定</span>
+          <span class="label">模型與語音設定</span>
         </button>
       </div>
     </aside>
+
+    <!-- Sidebar Resizer (拖曳調整側邊欄寬度，雙擊還原) -->
+    <div class="resizer resizer-col" id="sidebar-resizer" role="separator" aria-orientation="vertical" title="拖曳調整側邊欄寬度（雙擊還原）"></div>
 
     <!-- Main Chat Area -->
     <main class="chat-main">
@@ -64,6 +97,24 @@
           <!-- Toggle Stage Button (SillyTavern Style) -->
           <button class="btn-icon btn-nav-stage-toggle active" id="btn-toggle-stage" title="切換角色立繪展示區">
             <span>🎭 角色立繪</span>
+          </button>
+
+          <!-- Layout Orientation Toggle (立繪與對話框 左右 / 上下 並排) -->
+          <button class="btn-icon btn-nav-layout" id="btn-toggle-layout" title="切換立繪與對話框：左右並排 / 上下並排">
+            <span id="layout-icon">⇆</span>
+            <span id="layout-label">左右並排</span>
+          </button>
+
+          <!-- Bubble Style Selector (對話框漫畫邊框風格切換) -->
+          <button class="btn-icon btn-nav-bubble-style" id="btn-toggle-bubble-style" title="切換對話框邊框風格（點擊輪流切換：漫畫說話框、視覺小說、賽博科技、圓潤簡約）">
+            <span id="bubble-style-icon">🗯️</span>
+            <span id="bubble-style-label">漫畫說話框</span>
+          </button>
+
+          <!-- Chat Theme / Background Selector (聊天室背景與情境主題切換) -->
+          <button class="btn-icon btn-nav-theme" id="btn-toggle-theme" title="切換聊天室背景與情境主題（點擊輪流切換：📱 LINE通訊、📜 復古牛皮紙、📖 古典書本、🌌 預設深色）">
+            <span id="nav-theme-icon">🎨</span>
+            <span id="nav-theme-label">聊天背景</span>
           </button>
 
           <div class="active-persona-badge" id="active-persona-badge">
@@ -90,8 +141,18 @@
         <section class="character-stage" id="character-stage">
           <div class="sprite-stage-inner">
             <div class="sprite-container" id="sprite-container">
-              <!-- Actual Sprite Image -->
-              <img id="character-sprite" class="sprite-img mode-half-body hidden" src="" alt="角色立繪">
+              <!-- Zoom / Pan Wrapper: 使用者縮放與拖曳平移套用在這層，與立繪本身的模式/呼吸動畫分開 -->
+              <div class="sprite-transform" id="sprite-transform">
+                <!-- Actual Sprite Image -->
+                <img id="character-sprite" class="sprite-img mode-half-body hidden" src="" alt="角色立繪" draggable="false">
+              </div>
+
+              <!-- Sprite Zoom Controls (滾輪縮放、拖曳平移、雙擊還原) -->
+              <div class="sprite-zoom-controls hidden" id="sprite-zoom-controls">
+                <button class="btn-zoom" id="btn-sprite-zoom-out" title="縮小（或滾輪向下）">−</button>
+                <button class="btn-zoom btn-zoom-label" id="btn-sprite-zoom-reset" title="重設縮放與位置（或在立繪上雙擊）"><span id="sprite-zoom-label">100%</span></button>
+                <button class="btn-zoom" id="btn-sprite-zoom-in" title="放大（或滾輪向上）">＋</button>
+              </div>
 
               <!-- Empty State / Placeholder -->
               <div class="sprite-empty-state" id="sprite-empty-state">
@@ -115,12 +176,6 @@
               </div>
 
               <div class="stage-control-buttons">
-                <!-- Half Body vs Full Body Switcher -->
-                <button class="btn-stage-control" id="btn-toggle-display-mode" title="切換 上半身(第一人稱) / 全身形象">
-                  <span id="display-mode-icon">👤</span>
-                  <span id="display-mode-label">上半身</span>
-                </button>
-
                 <!-- Change Image Button -->
                 <button class="btn-stage-control" id="btn-change-sprite" title="上傳 / 更換立繪圖片">
                   <span>🖼️ 換立繪</span>
@@ -133,74 +188,152 @@
           </div>
         </section>
 
+        <!-- Stage Resizer (拖曳調整立繪區與對話框比例，雙擊還原) -->
+        <div class="resizer" id="stage-resizer" role="separator" title="拖曳調整立繪區大小（雙擊還原）"></div>
+
         <!-- Chat Dialogue Panel (Right Side) -->
-        <section class="chat-dialogue-panel" id="chat-dialogue-panel">
-          <!-- Message History Area -->
-          <div class="messages-container" id="messages-container">
-            <!-- Welcome Screen if no messages -->
-            <div class="welcome-screen" id="welcome-screen">
-              <div class="welcome-icon">💬</div>
-              <h2>有什麼我可以協助您的嗎？</h2>
-              <p class="welcome-subtitle">支援自訂角色立繪（上半身/全身）、本地 Ollama 離線模型與雲端 API，具備語音輸入與微軟 Edge-TTS 朗讀</p>
-              <div class="prompt-suggestions">
-                <button class="suggestion-card" data-prompt="請用繁體中文介紹什麼是 RAG（檢索增強生成）？">
-                  <span class="card-icon">💡</span>
-                  <span class="card-text">解釋什麼是 RAG 技術？</span>
+        <section class="chat-dialogue-panel theme-line frame-phone" id="chat-dialogue-panel">
+          <!-- 擬物化裝置模型外框容器 (手機 / 牛皮紙手帳 / 古典書本 / 滿版無框) -->
+          <div class="device-frame-container" id="device-frame-container">
+            <!-- 手機外殼頂部動態島 / 瀏海 -->
+            <div class="phone-dynamic-island" id="phone-dynamic-island">
+              <div class="island-camera"></div>
+              <div class="island-sensor"></div>
+            </div>
+
+            <!-- 手機頂部狀態列 (Status Bar) -->
+            <div class="phone-status-bar" id="phone-status-bar">
+              <span class="status-time" id="status-bar-time">13:46</span>
+              <div class="status-icons">
+                <span class="status-signal">📶</span>
+                <span class="status-wifi">ᯤ</span>
+                <span class="status-battery">🔋</span>
+              </div>
+            </div>
+
+            <!-- LINE / 手機應用頂部導覽列 (App Header) -->
+            <div class="phone-app-header" id="phone-app-header">
+              <div class="header-left">
+                <button class="btn-phone-nav" id="btn-phone-back" title="返回聊天列表">
+                  <span class="chevron-icon">❮</span>
+                  <span class="unread-count">99+</span>
                 </button>
-                <button class="suggestion-card" data-prompt="請幫我寫一個 Python 範例：使用 FastAPI 實作串流輸出 (SSE)">
-                  <span class="card-icon">⚡</span>
-                  <span class="card-text">Python FastAPI 串流範例</span>
-                </button>
-                <button class="suggestion-card" data-prompt="如果想設計一款卡牌遊戲的 Combo 連攜系統，有哪些經典的設計方向？">
-                  <span class="card-icon">⚔️</span>
-                  <span class="card-text">卡牌 Combo 機制設計探討</span>
+                <span class="header-target-name" id="phone-chat-target-name">萬能助理</span>
+              </div>
+              <div class="header-right">
+                <button class="btn-phone-nav" id="btn-phone-search" title="搜尋對話">🔍</button>
+                <button class="btn-phone-nav" id="btn-phone-call" title="撥打通話 (角色打招呼問候)">📞</button>
+                <button class="btn-phone-nav" id="btn-phone-menu" title="開啟設定面板">☰</button>
+              </div>
+            </div>
+
+            <!-- 羊皮紙手稿標題與草書字體切換列 (Parchment Manuscript Header) -->
+            <div class="parchment-header" id="parchment-header">
+              <div class="parchment-header-left">
+                <span class="parchment-quill-icon">📜</span>
+                <div class="parchment-title-group">
+                  <span class="parchment-sub-title">CHRONICLE OF TALES · 冒險物語篇章</span>
+                  <h2 class="parchment-main-title" id="parchment-main-title">與 萬能助理 的手稿對話錄</h2>
+                </div>
+              </div>
+              <div class="parchment-header-right">
+                <button type="button" class="btn-parchment-font" id="btn-parchment-font" title="切換手寫草書 / 楷宋字體">
+                  <span id="parchment-font-icon">🖋️</span>
+                  <span id="parchment-font-label">草書字體</span>
                 </button>
               </div>
             </div>
 
-            <div class="message-list" id="message-list">
-              <!-- Messages will be injected here -->
-            </div>
-          </div>
-
-          <!-- Input Area -->
-          <div class="input-area">
-            <div class="input-box-wrapper">
-              <textarea 
-                id="chat-input" 
-                placeholder="輸入訊息... (Enter 發送，Shift + Enter 換行)" 
-                rows="1"
-              ></textarea>
-              
-              <div class="input-actions">
-                <!-- STT Voice Input Button -->
-                <button class="btn-action-icon" id="btn-mic" title="語音輸入 (STT)">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
-                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-                    <line x1="12" y1="19" x2="12" y2="23"></line>
-                    <line x1="8" y1="23" x2="16" y2="23"></line>
-                  </svg>
+            <!-- 古典書籍專屬頁眉 (Book Folio Header) -->
+            <div class="book-header" id="book-header">
+              <span class="book-folio-left">LIBER PRIMUS</span>
+              <span class="book-chapter-title" id="book-chapter-title">第壹章 ‧ 萬能助理之書</span>
+              <div class="book-header-right">
+                <button type="button" class="btn-book-font" id="btn-book-font" title="切換古籍字體（典雅宋體 / 手抄楷體 / 草書墨寶）">
+                  <span id="book-font-icon">📜</span>
+                  <span id="book-font-label">典雅宋體</span>
                 </button>
-
-                <!-- Send Button -->
-                <button class="btn-action-icon btn-send" id="btn-send" title="發送訊息">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="22" y1="2" x2="11" y2="13"></line>
-                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                  </svg>
-                </button>
-
-                <!-- Stop Generating Button (Hidden by default) -->
-                <button class="btn-action-icon btn-stop hidden" id="btn-stop" title="停止生成">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                    <rect x="6" y="6" width="12" height="12" rx="2"></rect>
-                  </svg>
-                </button>
+                <span class="book-folio-right">FOLIO · XLII</span>
               </div>
             </div>
-            <div class="input-footer-hint">
-              <span id="stt-status">語音輸入已就緒</span> • 點擊 AI 回覆旁的 🔊 即可使用自然中文朗讀
+
+            <!-- Message History Area -->
+            <div class="messages-container" id="messages-container">
+              <!-- Welcome Screen if no messages -->
+              <div class="welcome-screen" id="welcome-screen">
+                <div class="welcome-icon">💬</div>
+                <h2>有什麼我可以協助您的嗎？</h2>
+                <p class="welcome-subtitle">支援自訂角色立繪（上半身/全身）、本地 Ollama 離線模型與雲端 API，具備語音輸入與微軟 Edge-TTS 朗讀</p>
+                <div class="prompt-suggestions">
+                  <button class="suggestion-card" data-prompt="請用繁體中文介紹什麼是 RAG（檢索增強生成）？">
+                    <span class="card-icon">💡</span>
+                    <span class="card-text">解釋什麼是 RAG 技術？</span>
+                  </button>
+                  <button class="suggestion-card" data-prompt="請幫我寫一個 Python 範例：使用 FastAPI 實作串流輸出 (SSE)">
+                    <span class="card-icon">⚡</span>
+                    <span class="card-text">Python FastAPI 串流範例</span>
+                  </button>
+                  <button class="suggestion-card" data-prompt="如果想設計一款卡牌遊戲的 Combo 連攜系統，有哪些經典的設計方向？">
+                    <span class="card-icon">⚔️</span>
+                    <span class="card-text">卡牌 Combo 機制設計探討</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="message-list" id="message-list">
+                <!-- Messages will be injected here -->
+              </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="input-area" id="input-area">
+              <!-- 手機 LINE 底部快捷按鈕列 -->
+              <div class="phone-tools-row" id="phone-tools-row">
+                <button class="btn-phone-tool" id="btn-phone-plus" title="更多功能">＋</button>
+                <button class="btn-phone-tool" id="btn-phone-camera" title="更換角色立繪">📷</button>
+                <button class="btn-phone-tool" id="btn-phone-gallery" title="更換聊天背景">🖼️</button>
+              </div>
+
+              <div class="input-box-wrapper">
+                <textarea 
+                  id="chat-input" 
+                  placeholder="輸入訊息... (Enter 發送，Shift + Enter 換行)" 
+                  rows="1"
+                ></textarea>
+                
+                <div class="input-actions">
+                  <!-- STT Voice Input Button -->
+                  <button class="btn-action-icon" id="btn-mic" title="語音輸入 (STT)">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                      <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                      <line x1="12" y1="19" x2="12" y2="23"></line>
+                      <line x1="8" y1="23" x2="16" y2="23"></line>
+                    </svg>
+                  </button>
+
+                  <!-- Send Button -->
+                  <button class="btn-action-icon btn-send" id="btn-send" title="發送訊息">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="22" y1="2" x2="11" y2="13"></line>
+                      <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                  </button>
+
+                  <!-- Stop Generating Button (Hidden by default) -->
+                  <button class="btn-action-icon btn-stop hidden" id="btn-stop" title="停止生成">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                      <rect x="6" y="6" width="12" height="12" rx="2"></rect>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <div class="input-footer-hint">
+                <span id="stt-status">語音輸入已就緒</span> • 點擊頂部 📞 可讓角色語音通話問候
+              </div>
+
+              <!-- iPhone 底部橫條 (Home Indicator) -->
+              <div class="phone-home-bar" id="phone-home-bar"></div>
             </div>
           </div>
         </section>
@@ -225,6 +358,8 @@
           <button class="tab-btn active" data-tab="tab-model">模型來源</button>
           <button class="tab-btn" data-tab="tab-voice">語音朗讀 (TTS)</button>
           <button class="tab-btn" data-tab="tab-persona">自訂角色與形象</button>
+          <button class="tab-btn" data-tab="tab-theme">🎨 背景與主題</button>
+          <button class="tab-btn" data-tab="tab-bubble">對話框邊框</button>
         </div>
 
         <!-- Tab 1: Model Config -->
@@ -300,13 +435,6 @@
             <input type="text" id="persona-form-avatar" placeholder="例如：🌸" style="max-width: 100px;">
           </div>
           <div class="form-group">
-            <label>預設立繪顯示模式</label>
-            <select id="persona-form-mode" class="custom-select">
-              <option value="half_body">上半身（第一人稱對話視角）</option>
-              <option value="full_body">全身形象展示</option>
-            </select>
-          </div>
-          <div class="form-group">
             <label>角色描述 (簡介)</label>
             <input type="text" id="persona-form-desc" placeholder="例如：日常日語口語訓練">
           </div>
@@ -315,6 +443,117 @@
             <textarea id="persona-form-prompt" rows="4" placeholder="設定這個角色的世界觀、性格、回答風格..."></textarea>
           </div>
           <button class="btn-secondary" id="btn-save-new-persona">＋ 新增 / 儲存為新角色</button>
+        </div>
+
+        <!-- Tab 5: Chat Theme & Background Manager -->
+        <div class="tab-content" id="tab-theme">
+          <div class="form-group">
+            <label>情境主題預設</label>
+            <div class="theme-preset-grid">
+              <button type="button" class="theme-preset-card" data-theme="line">
+                <span class="preset-icon">📱</span>
+                <span class="preset-name">LINE 通訊風格</span>
+                <span class="preset-desc">經典淺藍背景、綠白通訊氣泡與已讀標記</span>
+              </button>
+              <button type="button" class="theme-preset-card" data-theme="kraft">
+                <span class="preset-icon">📜</span>
+                <span class="preset-name">典藏羊皮紙</span>
+                <span class="preset-desc">古老羊皮手稿、字下緊貼行線、草書墨跡與外置寫作案</span>
+              </button>
+              <button type="button" class="theme-preset-card" data-theme="book">
+                <span class="preset-icon">📖</span>
+                <span class="preset-name">古典典藏書本</span>
+                <span class="preset-desc">精裝書扉頁中縫陰影、古典襯線小說排版</span>
+              </button>
+              <button type="button" class="theme-preset-card active" data-theme="default">
+                <span class="preset-icon">🌌</span>
+                <span class="preset-name">預設深色科技</span>
+                <span class="preset-desc">深色科技星空底色與漫畫邊框風格</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 14px;">
+            <label>聊天視窗擬物化外框 (Device Frame)</label>
+            <select id="cfg-device-frame" class="custom-select">
+              <option value="phone">📱 智慧手機模型 (iPhone 金屬機身、動態島、狀態列、LINE頂欄)</option>
+              <option value="parchment">📜 典藏羊皮紙模型 (手稿篇章標題、文字底行線、外置書寫創作案)</option>
+              <option value="book">📖 古典書本模型 (精裝典藏書本、中縫立體翻折)</option>
+              <option value="none">🌌 現代無框模式 (滿版沉浸式視窗)</option>
+            </select>
+            <div class="field-hint">選擇聊天區外框模型，可自由搭配背景營造逼真擬物實體感！</div>
+          </div>
+
+          <div class="form-group" style="margin-top: 14px;">
+            <label>自訂背景圖片 (可上傳本機圖檔或輸入圖片網址)</label>
+            <div class="bg-upload-row">
+              <button type="button" class="btn-secondary" id="btn-upload-chat-bg">📁 選擇背景圖片...</button>
+              <input type="file" id="chat-bg-file-input" accept="image/*" class="hidden">
+              <input type="text" id="cfg-chat-bg-url" placeholder="或貼上背景圖片網址 (https://...)" style="flex: 1;">
+              <button type="button" class="btn-secondary" id="btn-clear-chat-bg" title="清除自訂背景並還原">🗑️ 清除</button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <div class="slider-row">
+              <label>遮罩暗度 (防止背景過亮干擾閱讀)</label>
+              <span id="label-bg-overlay" class="slider-val">20%</span>
+            </div>
+            <input type="range" id="cfg-bg-overlay" min="0" max="85" step="5" value="20" class="custom-range">
+          </div>
+
+          <div class="form-group">
+            <div class="slider-row">
+              <label>背景模糊度 (毛玻璃柔焦效果)</label>
+              <span id="label-bg-blur" class="slider-val">0px</span>
+            </div>
+            <input type="range" id="cfg-bg-blur" min="0" max="15" step="1" value="0" class="custom-range">
+          </div>
+
+          <!-- Theme Live Preview -->
+          <div class="theme-preview-container">
+            <label style="font-size: 13px; font-weight: 500; margin-bottom: 8px; display: block;">主題效果即時預覽：</label>
+            <div class="preview-mini-chat" id="theme-preview-box">
+              <div class="preview-assistant-row">
+                <div class="preview-mini-avatar" id="theme-preview-avatar">🤖</div>
+                <div class="preview-mini-bubble" id="preview-mini-assistant-bubble">
+                  嗨！今天想聊點什麼呢？✨
+                </div>
+              </div>
+              <div class="preview-user-row">
+                <div class="preview-mini-read-status" id="preview-read-status">已讀 13:37</div>
+                <div class="preview-mini-bubble user" id="preview-mini-user-bubble">
+                  天氣真好，想跟你聊聊！
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 4: Bubble Frame Style Manager -->
+        <div class="tab-content" id="tab-bubble">
+          <div class="form-group">
+            <label>對話框邊框風格</label>
+            <select id="cfg-bubble-style" class="custom-select">
+              <option value="comic">🗯️ 經典漫畫說話框（黑白手繪分鏡、尖角朝向立繪）</option>
+              <option value="vn">🌸 視覺小說框（日系 ADV 晶透微光金屬邊框）</option>
+              <option value="cyber">⚡ 賽博科技框（近未來霓虹斜切角、能量光條）</option>
+              <option value="clean">🫧 圓潤簡約框（現代質感通訊氣泡、柔和指標）</option>
+            </select>
+            <div class="field-hint">選擇說話框邊框樣式，對話氣泡會自動長出說話尖角指向立繪人物！</div>
+          </div>
+          <div class="bubble-style-preview-wrap">
+            <label style="font-size: 13px; font-weight: 500; margin-bottom: 8px; display: block;">樣式即時預覽效果：</label>
+            <div class="preview-bubble-card" id="preview-bubble-card">
+              <div class="bubble-speaker-tag">
+                <span class="speaker-name" id="preview-speaker-name">萬能助理</span>
+                <span class="speaker-status-badge">TALK</span>
+              </div>
+              <div class="preview-bubble-text">
+                「這就是像漫畫般的對話框！邊框帶有說話尖角直接指向立繪，看起來就像我正親自對你說話一樣呢～✨」
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
