@@ -6,17 +6,18 @@ import sys
 import cv2
 import numpy as np
 from gemini_webapi import GeminiClient
+from core.cookie_extractor import get_or_sync_gemini_cookies
 
 sys.stdout.reconfigure(encoding="utf-8")
 
-RAW_DIR = r"D:\My Project\raw_sprites"
-AVATAR_DIR = r"D:\My Project\ai_chat_app\data\avatars"
-ARTIFACT_DIR = r"C:\Users\uSER\.gemini\antigravity-ide\brain\f2afb745-ac5e-4bff-b36f-1e78d8087fdb"
-COOKIE_FILE = r"D:\My Project\gemini_cookies.json"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.path.join(BASE_DIR, "data")
+RAW_DIR = os.path.join(DATA_DIR, "raw_sprites")
+AVATAR_DIR = os.path.join(DATA_DIR, "avatars")
+COOKIE_FILE = os.path.join(DATA_DIR, "gemini_cookies.json")
 
 os.makedirs(RAW_DIR, exist_ok=True)
 os.makedirs(AVATAR_DIR, exist_ok=True)
-os.makedirs(ARTIFACT_DIR, exist_ok=True)
 
 PROMPTS = {
     "default": (
@@ -177,16 +178,20 @@ def chroma_key(raw_image_path, out_transparent_path):
 
 
 async def main():
-    with open(COOKIE_FILE, encoding="utf-8") as f:
-        cookies = json.load(f)
+    cookies = get_or_sync_gemini_cookies(BASE_DIR)
+    if not cookies or not cookies.get("__Secure-1PSID"):
+        print("[Error] 找不到有效的 Gemini Cookie，請確認本機 Edge/Chrome 是否已登入 Google 帳號。")
+        return
 
-    client = GeminiClient(cookies["__Secure-1PSID"], cookies["__Secure-1PSIDTS"])
-    client._cookies.set(
-        "__Secure-1PSIDCC",
-        cookies["__Secure-1PSIDCC"],
-        domain=".google.com",
-        secure=True,
-    )
+    print(f"[Gemini] 成功取得 Cookie: __Secure-1PSID={cookies['__Secure-1PSID'][:10]}...")
+    client = GeminiClient(cookies["__Secure-1PSID"], cookies.get("__Secure-1PSIDTS", ""))
+    if cookies.get("__Secure-1PSIDCC"):
+        client._cookies.set(
+            "__Secure-1PSIDCC",
+            cookies["__Secure-1PSIDCC"],
+            domain=".google.com",
+            secure=True,
+        )
     await client.init(timeout=120)
     print("[Gemini] Client initialized successfully.")
 
@@ -236,13 +241,8 @@ async def main():
         assistant_dir = os.path.join(AVATAR_DIR, "assistant")
         os.makedirs(assistant_dir, exist_ok=True)
         avatar_path = os.path.join(assistant_dir, f"{emo}.png")
-        artifact_path = os.path.join(ARTIFACT_DIR, f"assistant_{emo}.png")
         try:
             chroma_key(raw_target, avatar_path)
-            # Copy to artifact dir for preview
-            import shutil
-
-            shutil.copyfile(avatar_path, artifact_path)
         except Exception as e:
             print(f"[{emo}] Error in chroma keying: {e}")
 

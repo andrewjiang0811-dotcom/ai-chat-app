@@ -71,7 +71,32 @@ CRITICAL BACKGROUND REQUIREMENT: Solid pure bright green screen background #00FF
 
 ---
 
-## 5. 專案參考代碼
+## 5. 產圖前自動同步 Cookie 機制 (Automated Gemini Cookie Sync)
+
+為解決調用 Gemini Web API 產圖時 Cookie（`__Secure-1PSIDTS`）頻繁過期的問題，已在產圖工具鏈中整合自動同步模組：
+
+### 5.1 運作架構
+1. **呼叫產圖前自動提取**：
+   - 當使用者指示「請產圖」或執行產圖腳本時，系統會先呼叫 `core.cookie_extractor.get_or_sync_gemini_cookies()`。
+   - 自動掃描本機 Edge / Chrome 儲存的 `.google.com` Cookie 資料庫，使用 Windows DPAPI 解密得到最新的 `__Secure-1PSID`、`__Secure-1PSIDTS` 與 `__Secure-1PSIDCC`。
+   - 自動寫入 `data/gemini_cookies.json` 與 `data/config.json`，隨後立即發起生圖請求。
+2. **檔案被鎖定時的備用機制**：
+   - 若瀏覽器運行中且開啟獨佔鎖定，系統優先讀取既有快取 Cookie；若快取已失效，可使用開發專用擴充功能 `extensions/gemini-cookie-sync/` 傳送更新。
+
+### 5.2 產圖工具使用指令
+```bash
+# 生成單張指定表情與角色立繪（自動檢測並同步最新 Cookie）
+python tools/generate_character_sprite.py --persona tsundere_cat --emotion happy --prompt "..." --bg green
+
+# 批次生成萬能助理全表情立繪
+python batch_generate_sprites.py
+```
+
+---
+
+## 6. 專案參考代碼
+- 產圖與色鍵去背整合工具：[tools/generate_character_sprite.py](file:///c:/WorkFolder/MyProject/ai-chat-app/tools/generate_character_sprite.py)
 - 批次生成腳本：[batch_generate_sprites.py](file:///c:/WorkFolder/MyProject/ai-chat-app/batch_generate_sprites.py)
-- 純 Pillow 高精準色鍵去背演算法：[scratch/chroma_key_sprites.py](file:///c:/WorkFolder/MyProject/ai-chat-app/scratch/chroma_key_sprites.py)
+- Cookie 自動提取模組：[core/cookie_extractor.py](file:///c:/WorkFolder/MyProject/ai-chat-app/core/cookie_extractor.py)
 - 表情修正歷史記錄：[docs/PERSONA_SPRITES_REFINEMENT.md](file:///c:/WorkFolder/MyProject/ai-chat-app/docs/PERSONA_SPRITES_REFINEMENT.md)
+

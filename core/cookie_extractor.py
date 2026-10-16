@@ -175,7 +175,69 @@ def extract_from_local_browsers() -> Tuple[bool, Dict[str, str], str]:
     if last_locked_browser:
         return False, {}, (
             f"偵測到 {last_locked_browser} 瀏覽器目前正在執行中，其 Cookie 檔案被系統獨佔鎖定。"
-            f"建議使用專屬的「Gemini Cookie 同步擴充功能」實現隨時全自動同步，或將 {last_locked_browser} 暫時關閉後再次點擊自動讀取。"
         )
 
     return False, {}, "未在常見瀏覽器路徑中找到登入中的 Google Gemini Cookie。"
+
+
+def get_or_sync_gemini_cookies(base_dir: Optional[str] = None) -> Dict[str, str]:
+    """
+    專供開發與產圖時使用：
+    自動掃描並同步 Cookie 到本地設定檔 (data/config.json 與 data/gemini_cookies.json)
+    """
+    if not base_dir:
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    
+    config_file = os.path.join(base_dir, "data", "config.json")
+    cookie_file = os.path.join(base_dir, "data", "gemini_cookies.json")
+
+    # 1. 優先嘗試從本機 Edge / Chrome 提取最新 Cookie
+    success, browser_cookies, msg = extract_from_local_browsers()
+    if success and browser_cookies.get("__Secure-1PSID"):
+        print(f"[CookieSync] {msg}")
+        # 同步儲存至 config.json
+        if os.path.exists(config_file):
+            try:
+                with open(config_file, "r", encoding="utf-8") as f:
+                    cfg = json.load(f)
+                cfg["gemini_web_secure_1psid"] = browser_cookies.get("__Secure-1PSID", "")
+                if "__Secure-1PSIDTS" in browser_cookies:
+                    cfg["gemini_web_secure_1psidts"] = browser_cookies["__Secure-1PSIDTS"]
+                if "__Secure-1PSIDCC" in browser_cookies:
+                    cfg["gemini_web_secure_1psidcc"] = browser_cookies["__Secure-1PSIDCC"]
+                with open(config_file, "w", encoding="utf-8") as f:
+                    json.dump(cfg, f, ensure_ascii=False, indent=2)
+            except Exception:
+                pass
+        
+        # 同步儲存至 gemini_cookies.json
+        os.makedirs(os.path.dirname(cookie_file), exist_ok=True)
+        try:
+            with open(cookie_file, "w", encoding="utf-8") as f:
+                json.dump(browser_cookies, f, ensure_ascii=False, indent=2)
+        except Exception:
+            pass
+
+        return browser_cookies
+
+    # 2. 如果瀏覽器鎖定或讀不到，讀取既有設定檔
+    cookies = {}
+    if os.path.exists(cookie_file):
+        try:
+            with open(cookie_file, "r", encoding="utf-8") as f:
+                cookies = json.load(f)
+        except Exception:
+            pass
+
+    if not cookies.get("__Secure-1PSID") and os.path.exists(config_file):
+        try:
+            with open(config_file, "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+            if cfg.get("gemini_web_secure_1psid"):
+                cookies["__Secure-1PSID"] = cfg["gemini_web_secure_1psid"]
+                cookies["__Secure-1PSIDTS"] = cfg.get("gemini_web_secure_1psidts", "")
+                cookies["__Secure-1PSIDCC"] = cfg.get("gemini_web_secure_1psidcc", "")
+        except Exception:
+            pass
+
+    return cookies
