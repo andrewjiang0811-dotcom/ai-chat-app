@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "Gemini Cookie 自動同步小助手",
+  "version": "1.0.0",
+  "description": "自動同步 Google Gemini Web API 的 Cookie 到本機 AI 助理，徹底免除手動複製煩惱。",
+  "permissions": [
+    "cookies",
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "*://*.google.com/*",
+    "http://127.0.0.1:8000/*",
+    "http://localhost:8000/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Gemini Cookie 自動同步助手",
+    "default_icon": "icon.png"
+  },
+  "icons": {
+    "128": "icon.png"
+  }
+}

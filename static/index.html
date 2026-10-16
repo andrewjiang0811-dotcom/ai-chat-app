@@ -433,6 +433,45 @@
             <div class="preset-chips-group">
               <span class="preset-label">💡 提示：使用 Google 帳號 Cookie 免費連線（免 API Key）</span>
             </div>
+
+            <!-- Cookie 自動同步快捷操作面板 -->
+            <div class="cookie-sync-panel">
+              <div class="cookie-action-bar">
+                <button type="button" class="btn-cookie-detect" id="btn-detect-browser-cookies" title="自動掃描並解密讀取本機 Edge / Chrome 儲存的 Gemini Cookie">
+                  <span id="detect-cookie-icon">🔄</span>
+                  <span id="detect-cookie-text">自動從本機瀏覽器讀取</span>
+                </button>
+                <button type="button" class="btn-cookie-ext-guide" id="btn-toggle-ext-guide" title="查看並載入 Chrome / Edge 專用全自動同步小外掛">
+                  <span>🧩 瀏覽器全自動同步插件</span>
+                </button>
+              </div>
+
+              <!-- 擴充功能安裝指引 (預設折疊) -->
+              <div class="cookie-ext-guide-box hidden" id="cookie-ext-guide-box">
+                <div style="font-weight: 600; color: #e0e7ff; margin-bottom: 6px;">⚡ 安裝「Gemini Cookie 自動同步助手」擴充功能（1 分鐘免繁瑣操作）：</div>
+                <div style="font-size: 11.5px; color: #94a3b8; margin-bottom: 8px;">
+                  安裝後，只要在瀏覽器中正常登入或打開 <code>gemini.google.com</code>，擴充功能便會在背景自動將最新 Cookie 即時同步至本地 AI 助手，再也不需要手動更新！
+                </div>
+                <ol>
+                  <li>開啟 Edge 網址 <code>edge://extensions</code> 或 Chrome 網址 <code>chrome://extensions</code></li>
+                  <li>開啟右上角的 <strong>「開發人員模式」</strong> 開關</li>
+                  <li>點擊左上角的 <strong>「載入未封裝項目」</strong> (Load unpacked)</li>
+                  <li>選擇專案目錄中的：<code>c:\WorkFolder\MyProject\ai-chat-app\extensions\gemini-cookie-sync</code> 資料夾即可！</li>
+                </ol>
+                <div style="margin-top: 6px; font-size: 11px; color: #a5b4fc;">
+                  ✨ 插件支援手動點擊「⚡ 立即同步」與造訪 Gemini 時「背景靜默自動同步」雙重機制！
+                </div>
+              </div>
+
+              <!-- 智慧快貼輸入框 -->
+              <div class="cookie-smart-paste-area">
+                <label style="font-size: 11.5px; color: #cbd5e1; margin-bottom: 4px; display: block;">📋 智慧解析快速貼上（支援整段 Header 或 F12 任意文字）：</label>
+                <textarea id="cfg-gemini-smart-paste" class="cookie-smart-paste-input" placeholder="可在此直接貼上任意 Cookie 字串（如 Cookie: __Secure-1PSID=... 或多行文字），將自動拆解並填入下方欄位！"></textarea>
+              </div>
+
+              <div id="cookie-status-msg" class="cookie-status-msg"></div>
+            </div>
+
             <label style="margin-top: 6px;">__Secure-1PSID Cookie <span style="color: #ff6b6b;">*</span></label>
             <input type="password" id="cfg-gemini-web-1psid" placeholder="貼上 __Secure-1PSID (長字串)">
             <label style="margin-top: 10px;">__Secure-1PSIDTS Cookie (選填，但強烈建議填寫)</label>
@@ -442,11 +481,11 @@
             <label style="margin-top: 10px;">Proxy 代理伺服器 (選填)</label>
             <input type="text" id="cfg-gemini-web-proxy" placeholder="例如 http://127.0.0.1:7890 (若所在地區受限請填寫)">
             <div class="field-hint" style="line-height: 1.6; margin-top: 6px;">
-              🔍 <strong>如何獲取 Cookie：</strong><br>
+              🔍 <strong>手動獲取 Cookie 備用方式：</strong><br>
               1. 開啟並登入 <a href="https://gemini.google.com" target="_blank" style="color: var(--primary); text-decoration: underline;">gemini.google.com</a><br>
               2. 按鍵盤 <code>F12</code> 開啟開發者工具 → 切換至 <strong>Application (應用程式)</strong> 或 <strong>儲存空間</strong><br>
               3. 點開左側 <strong>Cookies</strong> → 點擊 <code>https://gemini.google.com</code><br>
-              4. 找到 <code>__Secure-1PSID</code>、<code>__Secure-1PSIDTS</code> 與 <code>__Secure-1PSIDCC</code>，複製其 Value 貼到此處即可！
+              4. 找到 <code>__Secure-1PSID</code>、<code>__Secure-1PSIDTS</code> 與 <code>__Secure-1PSIDCC</code> 貼到此處即可！
             </div>
           </div>
 

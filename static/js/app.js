@@ -176,6 +176,13 @@ const cfgGeminiWeb1psid = document.getElementById("cfg-gemini-web-1psid");
 const cfgGeminiWeb1psidts = document.getElementById("cfg-gemini-web-1psidts");
 const cfgGeminiWeb1psidcc = document.getElementById("cfg-gemini-web-1psidcc");
 const cfgGeminiWebProxy = document.getElementById("cfg-gemini-web-proxy");
+const btnDetectBrowserCookies = document.getElementById("btn-detect-browser-cookies");
+const detectCookieIcon = document.getElementById("detect-cookie-icon");
+const detectCookieText = document.getElementById("detect-cookie-text");
+const btnToggleExtGuide = document.getElementById("btn-toggle-ext-guide");
+const cookieExtGuideBox = document.getElementById("cookie-ext-guide-box");
+const cfgGeminiSmartPaste = document.getElementById("cfg-gemini-smart-paste");
+const cookieStatusMsg = document.getElementById("cookie-status-msg");
 const cfgOpenaiKey = document.getElementById("cfg-openai-key");
 const cfgOpenaiUrl = document.getElementById("cfg-openai-url");
 const cfgModel = document.getElementById("cfg-model");
@@ -537,6 +544,109 @@ function setupEventListeners() {
   // Test Connection Button click
   if (btnTestConnection) {
     btnTestConnection.addEventListener("click", runConnectionTest);
+  }
+
+  // 切換擴充功能指引折疊
+  if (btnToggleExtGuide && cookieExtGuideBox) {
+    btnToggleExtGuide.addEventListener("click", () => {
+      cookieExtGuideBox.classList.toggle("hidden");
+    });
+  }
+
+  // 智慧快速貼上自動解析
+  if (cfgGeminiSmartPaste) {
+    let parseDebounce = null;
+    cfgGeminiSmartPaste.addEventListener("input", () => {
+      const text = cfgGeminiSmartPaste.value.trim();
+      if (!text) {
+        if (cookieStatusMsg) cookieStatusMsg.style.display = "none";
+        return;
+      }
+
+      clearTimeout(parseDebounce);
+      parseDebounce = setTimeout(async () => {
+        try {
+          const res = await fetch("/api/config/cookies/parse", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ raw_text: text })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const parsed = data.parsed || {};
+            let filledCount = 0;
+            if (parsed["__Secure-1PSID"]) {
+              cfgGeminiWeb1psid.value = parsed["__Secure-1PSID"];
+              filledCount++;
+            }
+            if (parsed["__Secure-1PSIDTS"]) {
+              cfgGeminiWeb1psidts.value = parsed["__Secure-1PSIDTS"];
+              filledCount++;
+            }
+            if (parsed["__Secure-1PSIDCC"]) {
+              cfgGeminiWeb1psidcc.value = parsed["__Secure-1PSIDCC"];
+              filledCount++;
+            }
+
+            if (cookieStatusMsg) {
+              if (filledCount > 0) {
+                cookieStatusMsg.className = "cookie-status-msg success";
+                cookieStatusMsg.textContent = `✨ 成功識別並填入 ${filledCount} 個 Cookie 項目！請點擊下方「測試連線」驗證。`;
+              } else {
+                cookieStatusMsg.className = "cookie-status-msg warning";
+                cookieStatusMsg.textContent = "未能從貼上的文字中識別出 __Secure-1PSID，請確認是否包含該項目。";
+              }
+            }
+          }
+        } catch (e) {
+          console.warn("Parse cookie error:", e);
+        }
+      }, 300);
+    });
+  }
+
+  // 自動從本機瀏覽器讀取 Cookie
+  if (btnDetectBrowserCookies) {
+    btnDetectBrowserCookies.addEventListener("click", async () => {
+      btnDetectBrowserCookies.disabled = true;
+      if (detectCookieIcon) detectCookieIcon.textContent = "⏳";
+      if (detectCookieText) detectCookieText.textContent = "正在掃描本機瀏覽器...";
+      if (cookieStatusMsg) {
+        cookieStatusMsg.className = "cookie-status-msg warning";
+        cookieStatusMsg.textContent = "正在讀取本機 Edge / Chrome / Firefox Cookie 資料庫...";
+      }
+
+      try {
+        const res = await fetch("/api/config/cookies/detect-from-browser", { method: "POST" });
+        const data = await res.json();
+        
+        if (data.success) {
+          if (cookieStatusMsg) {
+            cookieStatusMsg.className = "cookie-status-msg success";
+            cookieStatusMsg.textContent = `🎉 ${data.message} 已同步更新設定！`;
+          }
+          await loadConfig();
+          runConnectionTest();
+        } else {
+          if (cookieStatusMsg) {
+            cookieStatusMsg.className = "cookie-status-msg warning";
+            cookieStatusMsg.textContent = `⚠️ ${data.message}`;
+          }
+          if (cookieExtGuideBox) {
+            cookieExtGuideBox.classList.remove("hidden");
+          }
+        }
+      } catch (err) {
+        if (cookieStatusMsg) {
+          cookieStatusMsg.className = "cookie-status-msg error";
+          cookieStatusMsg.textContent = `讀取失敗: ${err.message}`;
+        }
+      } finally {
+        btnDetectBrowserCookies.disabled = false;
+        if (detectCookieIcon) detectCookieIcon.textContent = "🔄";
+        if (detectCookieText) detectCookieText.textContent = "自動從本機瀏覽器讀取";
+      }
+    });
   }
 
   // 手機狀態列即時時鐘

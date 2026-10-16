@@ -3,6 +3,7 @@ import json
 import uuid
 from typing import Dict, Any, Optional
 from fastapi import FastAPI, HTTPException, Request, Response, UploadFile, File, Form
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -42,6 +43,10 @@ from core.tts_engine import (
     AVAILABLE_VOICES,
     DEFAULT_VOICE,
     synthesize_speech
+)
+from core.cookie_extractor import (
+    parse_cookie_string,
+    extract_from_local_browsers
 )
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -88,6 +93,14 @@ init_db()
 
 app = FastAPI(title="AI Chat App")
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 AVATARS_DIR = os.path.join(DATA_DIR, "avatars")
 BACKGROUNDS_DIR = os.path.join(DATA_DIR, "backgrounds")
 os.makedirs(AVATARS_DIR, exist_ok=True)
@@ -118,6 +131,96 @@ async def update_app_config(req: Request):
     curr.update(data)
     save_config(curr)
     return {"status": "ok", "config": curr}
+
+class CookieSyncReq(BaseModel):
+    secure_1psid: Optional[str] = None
+    secure_1psidts: Optional[str] = None
+    secure_1psidcc: Optional[str] = None
+    raw_cookie: Optional[str] = None
+    source: Optional[str] = "manual"
+
+@app.post("/api/config/cookies/sync")
+async def sync_gemini_cookies(req: CookieSyncReq):
+    curr = load_config()
+    updates = {}
+    
+    if req.raw_cookie:
+        parsed = parse_cookie_string(req.raw_cookie)
+        if parsed.get("__Secure-1PSID"):
+            updates["gemini_web_secure_1psid"] = parsed["__Secure-1PSID"]
+        if parsed.get("__Secure-1PSIDTS"):
+            updates["gemini_web_secure_1psidts"] = parsed["__Secure-1PSIDTS"]
+        if parsed.get("__Secure-1PSIDCC"):
+            updates["gemini_web_secure_1psidcc"] = parsed["__Secure-1PSIDCC"]
+    
+    if req.secure_1psid:
+        updates["gemini_web_secure_1psid"] = req.secure_1psid.strip()
+    if req.secure_1psidts:
+        updates["gemini_web_secure_1psidts"] = req.secure_1psidts.strip()
+    if req.secure_1psidcc:
+        updates["gemini_web_secure_1psidcc"] = req.secure_1psidcc.strip()
+
+    if not updates.get("gemini_web_secure_1psid") and not curr.get("gemini_web_secure_1psid"):
+        raise HTTPException(status_code=400, detail="缺少有效的 __Secure-1PSID Cookie")
+
+    curr.update(updates)
+    save_config(curr)
+
+    test_res = await test_provider_connection(
+        provider="gemini_web",
+        secure_1psid=curr.get("gemini_web_secure_1psid", ""),
+        secure_1psidts=curr.get("gemini_web_secure_1psidts", ""),
+        secure_1psidcc=curr.get("gemini_web_secure_1psidcc", ""),
+        gemini_web_proxy=curr.get("gemini_web_proxy", "")
+    )
+
+    return {
+        "status": "ok",
+        "message": "Cookie 同步成功！",
+        "cookies_updated": list(updates.keys()),
+        "test_result": test_res
+    }
+
+@app.post("/api/config/cookies/detect-from-browser")
+async def detect_cookies_from_browser():
+    success, cookies, message = extract_from_local_browsers()
+    if not success:
+        return {"success": False, "message": message, "cookies": {}}
+    
+    curr = load_config()
+    curr["gemini_web_secure_1psid"] = cookies.get("__Secure-1PSID", "")
+    if "__Secure-1PSIDTS" in cookies:
+        curr["gemini_web_secure_1psidts"] = cookies["__Secure-1PSIDTS"]
+    if "__Secure-1PSIDCC" in cookies:
+        curr["gemini_web_secure_1psidcc"] = cookies["__Secure-1PSIDCC"]
+    save_config(curr)
+
+    test_res = await test_provider_connection(
+        provider="gemini_web",
+        secure_1psid=curr.get("gemini_web_secure_1psid", ""),
+        secure_1psidts=curr.get("gemini_web_secure_1psidts", ""),
+        secure_1psidcc=curr.get("gemini_web_secure_1psidcc", ""),
+        gemini_web_proxy=curr.get("gemini_web_proxy", "")
+    )
+
+    return {
+        "success": True,
+        "message": message,
+        "cookies": {
+            "__Secure-1PSID": bool(cookies.get("__Secure-1PSID")),
+            "__Secure-1PSIDTS": bool(cookies.get("__Secure-1PSIDTS")),
+            "__Secure-1PSIDCC": bool(cookies.get("__Secure-1PSIDCC"))
+        },
+        "test_result": test_res
+    }
+
+class ParseCookieReq(BaseModel):
+    raw_text: str
+
+@app.post("/api/config/cookies/parse")
+async def parse_cookie_endpoint(req: ParseCookieReq):
+    parsed = parse_cookie_string(req.raw_text)
+    return {"parsed": parsed, "count": len(parsed)}
 
 # Persona APIs
 @app.get("/api/personas")
