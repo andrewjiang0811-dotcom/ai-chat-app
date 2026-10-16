@@ -56,6 +56,7 @@ DEFAULT_CONFIG = {
     "gemini_api_key": "",
     "gemini_web_secure_1psid": "",
     "gemini_web_secure_1psidts": "",
+    "gemini_web_secure_1psidcc": "",
     "gemini_web_proxy": "",
     "openai_api_key": "",
     "openai_base_url": "https://api.openai.com/v1",
@@ -274,6 +275,7 @@ async def list_available_models():
     gemini_web_models = await get_gemini_webapi_models(
         secure_1psid=config.get("gemini_web_secure_1psid", ""),
         secure_1psidts=config.get("gemini_web_secure_1psidts", ""),
+        secure_1psidcc=config.get("gemini_web_secure_1psidcc", ""),
         proxy=config.get("gemini_web_proxy", "")
     )
     openai_models = await get_openai_compatible_models(
@@ -296,6 +298,7 @@ class TestConnectionReq(BaseModel):
     openai_base_url: Optional[str] = "https://api.openai.com/v1"
     secure_1psid: Optional[str] = ""
     secure_1psidts: Optional[str] = ""
+    secure_1psidcc: Optional[str] = ""
     gemini_web_proxy: Optional[str] = ""
 
 @app.post("/api/models/test")
@@ -308,6 +311,7 @@ async def test_model_connection(req: TestConnectionReq):
         openai_base_url=req.openai_base_url or "https://api.openai.com/v1",
         secure_1psid=req.secure_1psid or "",
         secure_1psidts=req.secure_1psidts or "",
+        secure_1psidcc=req.secure_1psidcc or "",
         gemini_web_proxy=req.gemini_web_proxy or ""
     )
     return result

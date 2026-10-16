@@ -174,6 +174,7 @@ const cfgOllamaHost = document.getElementById("cfg-ollama-host");
 const cfgGeminiKey = document.getElementById("cfg-gemini-key");
 const cfgGeminiWeb1psid = document.getElementById("cfg-gemini-web-1psid");
 const cfgGeminiWeb1psidts = document.getElementById("cfg-gemini-web-1psidts");
+const cfgGeminiWeb1psidcc = document.getElementById("cfg-gemini-web-1psidcc");
 const cfgGeminiWebProxy = document.getElementById("cfg-gemini-web-proxy");
 const cfgOpenaiKey = document.getElementById("cfg-openai-key");
 const cfgOpenaiUrl = document.getElementById("cfg-openai-url");
@@ -614,6 +615,7 @@ function updateUIWithConfig() {
   cfgGeminiKey.value = state.config.gemini_api_key || "";
   if (cfgGeminiWeb1psid) cfgGeminiWeb1psid.value = state.config.gemini_web_secure_1psid || "";
   if (cfgGeminiWeb1psidts) cfgGeminiWeb1psidts.value = state.config.gemini_web_secure_1psidts || "";
+  if (cfgGeminiWeb1psidcc) cfgGeminiWeb1psidcc.value = state.config.gemini_web_secure_1psidcc || "";
   if (cfgGeminiWebProxy) cfgGeminiWebProxy.value = state.config.gemini_web_proxy || "";
   cfgOpenaiKey.value = state.config.openai_api_key || "";
   cfgOpenaiUrl.value = state.config.openai_base_url || "https://api.openai.com/v1";
@@ -750,6 +752,7 @@ async function runConnectionTest() {
     gemini_api_key: cfgGeminiKey ? cfgGeminiKey.value.trim() : "",
     secure_1psid: cfgGeminiWeb1psid ? cfgGeminiWeb1psid.value.trim() : "",
     secure_1psidts: cfgGeminiWeb1psidts ? cfgGeminiWeb1psidts.value.trim() : "",
+    secure_1psidcc: cfgGeminiWeb1psidcc ? cfgGeminiWeb1psidcc.value.trim() : "",
     gemini_web_proxy: cfgGeminiWebProxy ? cfgGeminiWebProxy.value.trim() : "",
     openai_api_key: cfgOpenaiKey ? cfgOpenaiKey.value.trim() : "",
     openai_base_url: cfgOpenaiUrl ? cfgOpenaiUrl.value.trim() : ""
@@ -3008,6 +3011,7 @@ async function saveSettings() {
     gemini_api_key: cfgGeminiKey.value.trim(),
     gemini_web_secure_1psid: cfgGeminiWeb1psid ? cfgGeminiWeb1psid.value.trim() : "",
     gemini_web_secure_1psidts: cfgGeminiWeb1psidts ? cfgGeminiWeb1psidts.value.trim() : "",
+    gemini_web_secure_1psidcc: cfgGeminiWeb1psidcc ? cfgGeminiWeb1psidcc.value.trim() : "",
     gemini_web_proxy: cfgGeminiWebProxy ? cfgGeminiWebProxy.value.trim() : "",
     openai_api_key: cfgOpenaiKey.value.trim(),
     openai_base_url: cfgOpenaiUrl.value.trim(),

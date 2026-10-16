@@ -60,6 +60,7 @@ async def get_gemini_models(api_key: str) -> List[str]:
 async def get_gemini_webapi_models(
     secure_1psid: str = "",
     secure_1psidts: Optional[str] = None,
+    secure_1psidcc: Optional[str] = None,
     proxy: Optional[str] = None
 ) -> List[str]:
     """Retrieve list of available models from Google Gemini Web API using cookies."""
@@ -71,6 +72,8 @@ async def get_gemini_webapi_models(
             secure_1psidts=secure_1psidts.strip() if secure_1psidts else None,
             proxy=proxy.strip() if proxy else None
         )
+        if secure_1psidcc:
+            client._cookies.set("__Secure-1PSIDCC", secure_1psidcc.strip(), domain=".google.com", secure=True)
         await client.init()
         if client.account_status == AccountStatus.AVAILABLE:
             models_list = client.list_models()
@@ -132,6 +135,7 @@ async def test_provider_connection(
     openai_base_url: str = "https://api.openai.com/v1",
     secure_1psid: str = "",
     secure_1psidts: Optional[str] = None,
+    secure_1psidcc: Optional[str] = None,
     gemini_web_proxy: Optional[str] = None
 ) -> Dict[str, Any]:
     """Test connection to the specified AI model provider and return available models."""
@@ -158,6 +162,8 @@ async def test_provider_connection(
                 secure_1psidts=secure_1psidts.strip() if secure_1psidts else None,
                 proxy=gemini_web_proxy.strip() if gemini_web_proxy else None
             )
+            if secure_1psidcc:
+                client._cookies.set("__Secure-1PSIDCC", secure_1psidcc.strip(), domain=".google.com", secure=True)
             await client.init()
             latency = int((time.time() - t0) * 1000)
             if client.account_status == AccountStatus.AVAILABLE:
@@ -539,6 +545,7 @@ async def stream_gemini_webapi(
     messages: List[Dict[str, str]],
     secure_1psid: str,
     secure_1psidts: Optional[str] = None,
+    secure_1psidcc: Optional[str] = None,
     proxy: Optional[str] = None
 ) -> AsyncIterator[str]:
     """Stream chat completions from Google Gemini Web API using session cookies."""
@@ -583,6 +590,8 @@ async def stream_gemini_webapi(
             secure_1psidts=secure_1psidts.strip() if secure_1psidts else None,
             proxy=proxy.strip() if proxy else None
         )
+        if secure_1psidcc:
+            client._cookies.set("__Secure-1PSIDCC", secure_1psidcc.strip(), domain=".google.com", secure=True)
         await client.init()
         if client.account_status != AccountStatus.AVAILABLE:
             status_val = client.account_status.value if hasattr(client.account_status, "value") else client.account_status
@@ -642,12 +651,14 @@ async def stream_chat_response(
     elif provider in ("gemini_web", "gemini-webapi"):
         secure_1psid = config.get("gemini_web_secure_1psid", "")
         secure_1psidts = config.get("gemini_web_secure_1psidts", "")
+        secure_1psidcc = config.get("gemini_web_secure_1psidcc", "")
         proxy = config.get("gemini_web_proxy", "")
         async for chunk in stream_gemini_webapi(
             model=model,
             messages=messages,
             secure_1psid=secure_1psid,
             secure_1psidts=secure_1psidts,
+            secure_1psidcc=secure_1psidcc,
             proxy=proxy
         ):
             yield chunk

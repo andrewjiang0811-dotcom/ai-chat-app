@@ -30,9 +30,10 @@
    - Chrome / Edge：**Application**（應用程式）
    - Firefox：**Storage**（儲存空間）
 4. 在左側欄展開 **Cookies**，點擊 `https://gemini.google.com`。
-5. 在 Cookie 清單中找到並複製以下兩個鍵的值（Value）：
+5. 在 Cookie 清單中找到並複製以下鍵的值（Value）：
    - **`__Secure-1PSID`**（必填）：長字串，為主要的身份驗證權杖。
-   - **`__Secure-1PSIDTS`**（強烈建議填寫）：時間戳簽章，能大幅提升 Session 的穩定度與存活時間。
+   - **`__Secure-1PSIDTS`**（強烈建議填寫）：時間戳簽章，大幅提升 Session 的穩定度。
+   - **`__Secure-1PSIDCC`**（選填）：客戶端驗證簽章，強化連線壽命與防掉線保護。
 6. 回到本應用程式，點擊右上角「**⚙️ 模型與語音設定**」→「**模型來源**」切換為「**🌐 Google Gemini 網頁版**」，將值分別貼入對應輸入框並點擊「**儲存設定**」。
 
 ---
@@ -53,6 +54,8 @@ gemini-webapi>=2.1.1
       secure_1psidts=secure_1psidts.strip() if secure_1psidts else None,
       proxy=proxy.strip() if proxy else None
   )
+  if secure_1psidcc:
+      client._cookies.set("__Secure-1PSIDCC", secure_1psidcc.strip(), domain=".google.com", secure=True)
   await client.init()
   ```
 - **狀態碼診斷與錯誤處理**：
