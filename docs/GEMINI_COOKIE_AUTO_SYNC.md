@@ -47,9 +47,43 @@ cookies = get_or_sync_gemini_cookies(BASE_DIR)
 
 ---
 
-## 3. 產圖工具使用指令
+---
 
-### 3.1 單張角色情緒立繪生成（自動同步 Cookie + 自動去背）
+## 3. 如何指定「無痕視窗」或「隔離瀏覽器」的 Cookie？
+
+### 3.1 為什麼無法直接從硬碟檔案讀取無痕視窗的 Cookie？
+Chromium（Edge / Chrome）的無痕模式（Incognito / InPrivate）設計宗旨是**不留痕跡於硬碟**，因此無痕視窗的 Session 與 Cookie **完全只存放在電腦記憶體 (RAM) 中**，**從不寫入**磁碟的 SQLite 資料庫檔案。因此硬碟上的檔案永遠只有常規視窗的 Cookie。
+
+### 3.2 三種指定並讀取無痕／專用環境的解決方案：
+
+#### 方案 A：使用 CDP 遠端除錯埠（直讀無痕視窗的 RAM 記憶體，最推薦）
+我們為您準備了一鍵啟動批次檔 [tools/launch_gemini_inprivate.bat](file:///c:/WorkFolder/MyProject/ai-chat-app/tools/launch_gemini_inprivate.bat)：
+```bash
+# 啟動時加入 CDP 除錯參數：
+msedge.exe --inprivate --remote-debugging-port=9222 "https://gemini.google.com"
+```
+- **運作原理**：產圖腳本 `core/cookie_extractor.py` 會自動連線 `http://127.0.0.1:9222`，透過 Chrome DevTools Protocol 穿透直接取得**記憶體中最新鮮的 Cookie**。
+- **優勢**：完全不需要關閉瀏覽器，**永遠不會遇到檔案鎖定占用問題**！
+
+#### 方案 B：使用獨立開發 Profile（dev_profile，兼具無痕與持久化）
+點擊執行 [tools/launch_gemini_dev_profile.bat](file:///c:/WorkFolder/MyProject/ai-chat-app/tools/launch_gemini_dev_profile.bat)：
+```bash
+msedge.exe --user-data-dir="data/dev_profile" "https://gemini.google.com"
+```
+- **運作原理**：這是一個獨立於日常個人帳號的乾淨瀏覽環境（就像無痕一樣不受日常帳號干擾），但它的 Cookie 會存放在 `data/dev_profile/Default/Network/Cookies`。
+- **優勢**：日常使用的 Edge / Chrome 怎麼開、怎麼多開，都**絕不會占用或鎖定這個專用目錄**！
+
+#### 方案 C：擴充功能允許在無痕模式中執行
+1. 前往 `edge://extensions` 或 `chrome://extensions`。
+2. 找到「Gemini Cookie 自動同步小助手」，點擊「詳細資訊」。
+3. 開啟 **「在 InPrivate / 無痕模式中允許」**。
+4. 在無痕視窗登入 Gemini 後點擊擴充功能圖示，即可將記憶體中的 Cookie 寫入 `data/gemini_cookies.json`。
+
+---
+
+## 4. 產圖工具使用指令
+
+### 4.1 單張角色情緒立繪生成（自動同步 Cookie + 自動去背）
 ```bash
 # 語法：
 python tools/generate_character_sprite.py --persona <角色ID> --emotion <情緒名稱> --prompt "<生圖Prompt>" --bg <green|magenta>
@@ -62,14 +96,14 @@ python tools/generate_character_sprite.py \
   --bg green
 ```
 
-### 3.2 批次生成全套表情
+### 4.2 批次生成全套表情
 ```bash
 python batch_generate_sprites.py
 ```
 
 ---
 
-## 4. 角色立繪與去背標準遵循
+## 5. 角色立繪與去背標準遵循
 在調用產圖時，本工具自動遵循先前建立之版控規範（參見 [CHARACTER_SPRITE_GUIDELINES.md](file:///c:/WorkFolder/MyProject/ai-chat-app/docs/CHARACTER_SPRITE_GUIDELINES.md)）：
 1. **背景配色避讓**：嚴禁使用角色身上已有之配色。角色有白色服飾時一律採用純亮綠幕 `#00FF00` 或純洋紅 `#FF00FF`。
 2. **資產獨立資料夾歸類**：立繪圖片統一儲存至 `data/avatars/{persona_id}/{emotion}.png`，不使用 `assistant_` 雜湊前綴。
@@ -77,12 +111,15 @@ python batch_generate_sprites.py
 
 ---
 
-## 5. 相關程式碼清單
+## 6. 相關程式碼清單
 
 | 檔案 | 職責 |
 | :--- | :--- |
-| `core/cookie_extractor.py` | 本機 Edge/Chrome DPAPI 解密與 `get_or_sync_gemini_cookies()` 自動同步函數 |
+| `core/cookie_extractor.py` | 本機 Edge/Chrome DPAPI 解密、CDP 無痕記憶體穿透與自動同步模組 |
+| `tools/launch_gemini_inprivate.bat` | 一鍵啟動支援 CDP 記憶體除錯的 InPrivate 無痕視窗 |
+| `tools/launch_gemini_dev_profile.bat` | 一鍵啟動獨立開發隔離 Profile 瀏覽器 |
 | `tools/generate_character_sprite.py` | 整合自動同步 Cookie、Gemini 產圖與 Chroma Key 去背之通用工具 |
 | `batch_generate_sprites.py` | 批次立繪生成腳本（已整合 Cookie 自動同步與動態專案路徑） |
 | `docs/CHARACTER_SPRITE_GUIDELINES.md` | 角色立繪產圖與去背標準作業規範 |
 | `docs/GEMINI_COOKIE_AUTO_SYNC.md` | 本說明文件 |
+
