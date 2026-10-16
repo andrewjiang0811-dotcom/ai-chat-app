@@ -13,6 +13,8 @@ logs/
 data/config.json
 data/*.db
 data/chats/
+data/gemini_cookies.json
+data/raw_sprites/
 scratch/
 
 
