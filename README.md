@@ -98,3 +98,17 @@ ai_chat_app/
    git push -u origin main
    ```
 
+---
+
+## 📚 開發規範與功能說明文件
+
+- 🎨 [角色立繪生成與去背標準作業規範 (docs/CHARACTER_SPRITE_GUIDELINES.md)](docs/CHARACTER_SPRITE_GUIDELINES.md)
+  - 背景選色禁忌原則（身著白衣嚴禁使用白底，必須採用純綠幕 `#00FF00` 進行 Chroma Key 色鍵去背，以保證白衣服 100% 飽滿不被掏空）。
+  - 雙馬尾、自然碎瀏海、翡翠綠眼眸 Prompt 一致性鎖定規範。
+  - 眼睛與領帶色相保護、邊緣去綠光溢色（Despill）與 `1515px` 垂直基準線對齊標準。
+- ⚡ [AI 等待回覆 / 思考中動態指示器說明 (docs/THINKING_INDICATOR_FEATURE.md)](docs/THINKING_INDICATOR_FEATURE.md)
+  - 三階段漸進式等待提示文案、跳動波浪圓點、全主題適配與立繪思考姿態連動。
+- 🌐 [Google Gemini 網頁版 Cookie 憑證串接說明 (docs/GEMINI_WEBAPI_INTEGRATION.md)](docs/GEMINI_WEBAPI_INTEGRATION.md)
+  - 免 API Key、零額度限制的 Google Gemini 網頁版串接指南與連線診斷。
+
+
