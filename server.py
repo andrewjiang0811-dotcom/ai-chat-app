@@ -33,6 +33,7 @@ from core.emotion_analyzer import detect_emotion
 from core.llm_provider import (
     get_ollama_models,
     get_gemini_models,
+    get_gemini_webapi_models,
     get_openai_compatible_models,
     test_provider_connection,
     stream_chat_response
@@ -53,6 +54,9 @@ DEFAULT_CONFIG = {
     "model": "llama3:latest",
     "ollama_host": "http://localhost:11434",
     "gemini_api_key": "",
+    "gemini_web_secure_1psid": "",
+    "gemini_web_secure_1psidts": "",
+    "gemini_web_proxy": "",
     "openai_api_key": "",
     "openai_base_url": "https://api.openai.com/v1",
     "tts_voice": DEFAULT_VOICE,
@@ -267,6 +271,11 @@ async def list_available_models():
     config = load_config()
     ollama_models = await get_ollama_models(config.get("ollama_host", "http://localhost:11434"))
     gemini_models = await get_gemini_models(config.get("gemini_api_key", ""))
+    gemini_web_models = await get_gemini_webapi_models(
+        secure_1psid=config.get("gemini_web_secure_1psid", ""),
+        secure_1psidts=config.get("gemini_web_secure_1psidts", ""),
+        proxy=config.get("gemini_web_proxy", "")
+    )
     openai_models = await get_openai_compatible_models(
         base_url=config.get("openai_base_url", "https://api.openai.com/v1"),
         api_key=config.get("openai_api_key", "")
@@ -275,6 +284,7 @@ async def list_available_models():
     return {
         "ollama": ollama_models,
         "gemini": gemini_models,
+        "gemini_web": gemini_web_models,
         "openai": openai_models
     }
 
@@ -284,6 +294,9 @@ class TestConnectionReq(BaseModel):
     gemini_api_key: Optional[str] = ""
     openai_api_key: Optional[str] = ""
     openai_base_url: Optional[str] = "https://api.openai.com/v1"
+    secure_1psid: Optional[str] = ""
+    secure_1psidts: Optional[str] = ""
+    gemini_web_proxy: Optional[str] = ""
 
 @app.post("/api/models/test")
 async def test_model_connection(req: TestConnectionReq):
@@ -292,7 +305,10 @@ async def test_model_connection(req: TestConnectionReq):
         ollama_host=req.ollama_host or "http://localhost:11434",
         gemini_api_key=req.gemini_api_key or "",
         openai_api_key=req.openai_api_key or "",
-        openai_base_url=req.openai_base_url or "https://api.openai.com/v1"
+        openai_base_url=req.openai_base_url or "https://api.openai.com/v1",
+        secure_1psid=req.secure_1psid or "",
+        secure_1psidts=req.secure_1psidts or "",
+        gemini_web_proxy=req.gemini_web_proxy or ""
     )
     return result
 

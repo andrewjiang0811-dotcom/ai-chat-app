@@ -3,7 +3,22 @@ import time
 import httpx
 from typing import AsyncIterator, List, Dict, Optional, Any
 
+try:
+    from gemini_webapi import GeminiClient
+    from gemini_webapi.constants import AccountStatus, Model as GeminiWebModel
+    HAS_GEMINI_WEBAPI = True
+except ImportError:
+    HAS_GEMINI_WEBAPI = False
+
 DEFAULT_OLLAMA_HOST = "http://localhost:11434"
+
+DEFAULT_GEMINI_WEB_MODELS = [
+    "gemini-flash",
+    "gemini-pro",
+    "gemini-flash-lite",
+    "gemini-pro-advanced",
+    "gemini-flash-advanced"
+]
 
 async def get_ollama_models(host: str = DEFAULT_OLLAMA_HOST) -> List[str]:
     """Retrieve list of locally installed Ollama models."""
@@ -41,6 +56,32 @@ async def get_gemini_models(api_key: str) -> List[str]:
     except Exception:
         pass
     return fallback_models
+
+async def get_gemini_webapi_models(
+    secure_1psid: str = "",
+    secure_1psidts: Optional[str] = None,
+    proxy: Optional[str] = None
+) -> List[str]:
+    """Retrieve list of available models from Google Gemini Web API using cookies."""
+    if not secure_1psid or not HAS_GEMINI_WEBAPI:
+        return DEFAULT_GEMINI_WEB_MODELS
+    try:
+        client = GeminiClient(
+            secure_1psid=secure_1psid.strip(),
+            secure_1psidts=secure_1psidts.strip() if secure_1psidts else None,
+            proxy=proxy.strip() if proxy else None
+        )
+        await client.init()
+        if client.account_status == AccountStatus.AVAILABLE:
+            models_list = client.list_models()
+            await client.close()
+            if models_list:
+                return [getattr(m, "model_name", None) or getattr(m, "model_id", None) or str(m) for m in models_list]
+        await client.close()
+    except Exception:
+        pass
+    return DEFAULT_GEMINI_WEB_MODELS
+
 
 async def get_openai_compatible_models(base_url: str = "https://api.openai.com/v1", api_key: str = "") -> List[str]:
     """Retrieve list of models from OpenAI or compatible endpoint (DeepSeek, Groq, OpenRouter, etc.)."""
@@ -88,12 +129,71 @@ async def test_provider_connection(
     ollama_host: str = DEFAULT_OLLAMA_HOST,
     gemini_api_key: str = "",
     openai_api_key: str = "",
-    openai_base_url: str = "https://api.openai.com/v1"
+    openai_base_url: str = "https://api.openai.com/v1",
+    secure_1psid: str = "",
+    secure_1psidts: Optional[str] = None,
+    gemini_web_proxy: Optional[str] = None
 ) -> Dict[str, Any]:
     """Test connection to the specified AI model provider and return available models."""
     t0 = time.time()
 
-    if provider == "ollama":
+    if provider in ("gemini_web", "gemini-webapi"):
+        if not secure_1psid:
+            return {
+                "success": False,
+                "latency_ms": 0,
+                "models": [],
+                "message": "請先填寫 Google Gemini 網頁版 Cookie (__Secure-1PSID)！"
+            }
+        if not HAS_GEMINI_WEBAPI:
+            return {
+                "success": False,
+                "latency_ms": 0,
+                "models": [],
+                "message": "系統尚未安裝 gemini-webapi 套件，請執行 pip install gemini-webapi"
+            }
+        try:
+            client = GeminiClient(
+                secure_1psid=secure_1psid.strip(),
+                secure_1psidts=secure_1psidts.strip() if secure_1psidts else None,
+                proxy=gemini_web_proxy.strip() if gemini_web_proxy else None
+            )
+            await client.init()
+            latency = int((time.time() - t0) * 1000)
+            if client.account_status == AccountStatus.AVAILABLE:
+                models_list = client.list_models()
+                models = [getattr(m, "model_name", None) or getattr(m, "model_id", None) or str(m) for m in models_list] if models_list else DEFAULT_GEMINI_WEB_MODELS
+                await client.close()
+                return {
+                    "success": True,
+                    "latency_ms": latency,
+                    "models": models,
+                    "message": f"Google Gemini 網頁版 Cookie 驗證成功！共偵測到 {len(models)} 個可用模型。"
+                }
+            else:
+                status_val = client.account_status.value if hasattr(client.account_status, "value") else client.account_status
+                status_reasons = {
+                    1016: "Cookie 無效或已過期，請重新開啟 gemini.google.com 取得最新 __Secure-1PSID (建議同時填寫 __Secure-1PSIDTS)。",
+                    1060: "所在地區受 Google Gemini 網頁服務限制，請在設定中填寫 Proxy 代理伺服器網址。",
+                    1014: "Google 服務暫時不可用，請稍後重試。"
+                }
+                msg = status_reasons.get(status_val, f"認證狀態異常 (代碼: {status_val})")
+                await client.close()
+                return {
+                    "success": False,
+                    "latency_ms": latency,
+                    "models": [],
+                    "message": f"Gemini 網頁版認證未通過: {msg}"
+                }
+        except Exception as e:
+            return {
+                "success": False,
+                "latency_ms": 0,
+                "models": [],
+                "message": f"連線至 Gemini 網頁版異常: {str(e)}"
+            }
+
+    elif provider == "ollama":
         host = (ollama_host or DEFAULT_OLLAMA_HOST).rstrip("/")
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
@@ -434,6 +534,96 @@ async def stream_openai_compatible(
     except Exception as e:
         yield f"❌ API 連線錯誤：{str(e)}"
 
+async def stream_gemini_webapi(
+    model: str,
+    messages: List[Dict[str, str]],
+    secure_1psid: str,
+    secure_1psidts: Optional[str] = None,
+    proxy: Optional[str] = None
+) -> AsyncIterator[str]:
+    """Stream chat completions from Google Gemini Web API using session cookies."""
+    if not secure_1psid:
+        yield "❌ 請先在右上角「設定」中填入 Google Gemini 網頁版 Cookie (__Secure-1PSID)！"
+        return
+
+    if not HAS_GEMINI_WEBAPI:
+        yield "❌ 系統尚未安裝 gemini-webapi 套件，請於終端機執行 `pip install gemini-webapi`！"
+        return
+
+    # Extract context and format conversation prompt
+    system_text = ""
+    history_dialogue = []
+    for msg in messages:
+        role = msg.get("role")
+        content = msg.get("content", "")
+        if role == "system":
+            system_text += f"{content}\n"
+        elif role == "user":
+            history_dialogue.append(f"使用者: {content}")
+        elif role == "assistant":
+            history_dialogue.append(f"助理: {content}")
+
+    if len(history_dialogue) > 1:
+        prompt = ""
+        if system_text.strip():
+            prompt += f"【角色世界觀與性格設定】\n{system_text.strip()}\n\n"
+        prompt += "【先前對話歷史】\n" + "\n".join(history_dialogue[:-1]) + f"\n\n請根據以上設定與歷史對話，針對使用者最新的發言進行回覆：\n{history_dialogue[-1]}"
+    elif history_dialogue:
+        prompt = ""
+        if system_text.strip():
+            prompt += f"【角色世界觀與性格設定】\n{system_text.strip()}\n\n"
+        prompt += history_dialogue[-1].replace("使用者: ", "")
+    else:
+        prompt = system_text.strip() or "你好！"
+
+    client = None
+    try:
+        client = GeminiClient(
+            secure_1psid=secure_1psid.strip(),
+            secure_1psidts=secure_1psidts.strip() if secure_1psidts else None,
+            proxy=proxy.strip() if proxy else None
+        )
+        await client.init()
+        if client.account_status != AccountStatus.AVAILABLE:
+            status_val = client.account_status.value if hasattr(client.account_status, "value") else client.account_status
+            if status_val == 1016:
+                yield "❌ Gemini 網頁版 Cookie 已失效或過期，請重新從 gemini.google.com 取得最新 `__Secure-1PSID` (建議同時填寫 `__Secure-1PSIDTS`)！"
+            elif status_val == 1060:
+                yield "❌ 所在地區存取受限，請於設定中填入 Proxy 代理伺服器！"
+            else:
+                yield f"❌ Gemini 網頁版認證失敗 (狀態碼: {status_val})，請檢查 Cookie 設定。"
+            return
+
+        model_to_use = model or "gemini-flash"
+        reasoning_active = False
+
+        async for chunk in client.generate_content_stream(
+            prompt=prompt,
+            model=model_to_use
+        ):
+            # Check thoughts delta for deep thinking output
+            if getattr(chunk, "thoughts_delta", None):
+                if not reasoning_active:
+                    reasoning_active = True
+                    yield "> 💭 **Gemini 深度思考過程：**\n> "
+                yield chunk.thoughts_delta.replace("\n", "\n> ")
+
+            # Check text delta
+            if getattr(chunk, "text_delta", None):
+                if reasoning_active:
+                    reasoning_active = False
+                    yield "\n\n---\n\n"
+                yield chunk.text_delta
+
+    except Exception as e:
+        yield f"❌ Gemini 網頁版連線錯誤：{str(e)}"
+    finally:
+        if client:
+            try:
+                await client.close()
+            except Exception:
+                pass
+
 async def stream_chat_response(
     provider: str,
     model: str,
@@ -449,6 +639,18 @@ async def stream_chat_response(
         api_key = config.get("gemini_api_key", "")
         async for chunk in stream_gemini(model=model, messages=messages, api_key=api_key):
             yield chunk
+    elif provider in ("gemini_web", "gemini-webapi"):
+        secure_1psid = config.get("gemini_web_secure_1psid", "")
+        secure_1psidts = config.get("gemini_web_secure_1psidts", "")
+        proxy = config.get("gemini_web_proxy", "")
+        async for chunk in stream_gemini_webapi(
+            model=model,
+            messages=messages,
+            secure_1psid=secure_1psid,
+            secure_1psidts=secure_1psidts,
+            proxy=proxy
+        ):
+            yield chunk
     elif provider in ("openai", "custom"):
         api_key = config.get("openai_api_key", "")
         base_url = config.get("openai_base_url", "https://api.openai.com/v1")
@@ -456,4 +658,5 @@ async def stream_chat_response(
             yield chunk
     else:
         yield f"❌ 未知的模型提供者：{provider}"
+
 

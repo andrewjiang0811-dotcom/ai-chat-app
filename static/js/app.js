@@ -172,6 +172,9 @@ const btnSaveSettings = document.getElementById("btn-save-settings");
 const cfgProvider = document.getElementById("cfg-provider");
 const cfgOllamaHost = document.getElementById("cfg-ollama-host");
 const cfgGeminiKey = document.getElementById("cfg-gemini-key");
+const cfgGeminiWeb1psid = document.getElementById("cfg-gemini-web-1psid");
+const cfgGeminiWeb1psidts = document.getElementById("cfg-gemini-web-1psidts");
+const cfgGeminiWebProxy = document.getElementById("cfg-gemini-web-proxy");
 const cfgOpenaiKey = document.getElementById("cfg-openai-key");
 const cfgOpenaiUrl = document.getElementById("cfg-openai-url");
 const cfgModel = document.getElementById("cfg-model");
@@ -180,6 +183,7 @@ const cfgTtsVoice = document.getElementById("cfg-tts-voice");
 const cfgTtsAutoplay = document.getElementById("cfg-tts-autoplay");
 const groupOllama = document.getElementById("group-ollama");
 const groupGemini = document.getElementById("group-gemini");
+const groupGeminiWeb = document.getElementById("group-gemini-web");
 const groupOpenai = document.getElementById("group-openai");
 
 // Connection Test & Model Tags Elements
@@ -601,12 +605,16 @@ async function loadAppConfig() {
 function updateUIWithConfig() {
   const p = state.config.provider || "ollama";
   const m = state.config.model || "llama3";
-  navModelName.textContent = `${p.toUpperCase()}: ${m}`;
+  const pLabel = p === "gemini_web" ? "GEMINI WEB" : p.toUpperCase();
+  navModelName.textContent = `${pLabel}: ${m}`;
   
   cfgProvider.value = p;
   cfgModel.value = m;
   cfgOllamaHost.value = state.config.ollama_host || "http://localhost:11434";
   cfgGeminiKey.value = state.config.gemini_api_key || "";
+  if (cfgGeminiWeb1psid) cfgGeminiWeb1psid.value = state.config.gemini_web_secure_1psid || "";
+  if (cfgGeminiWeb1psidts) cfgGeminiWeb1psidts.value = state.config.gemini_web_secure_1psidts || "";
+  if (cfgGeminiWebProxy) cfgGeminiWebProxy.value = state.config.gemini_web_proxy || "";
   cfgOpenaiKey.value = state.config.openai_api_key || "";
   cfgOpenaiUrl.value = state.config.openai_base_url || "https://api.openai.com/v1";
   cfgTtsVoice.value = state.config.tts_voice || "zh-TW-HsiaoChenNeural";
@@ -619,10 +627,14 @@ function updateProviderFields() {
   const val = cfgProvider.value;
   groupOllama.classList.add("hidden");
   groupGemini.classList.add("hidden");
+  if (groupGeminiWeb) groupGeminiWeb.classList.add("hidden");
   groupOpenai.classList.add("hidden");
 
   if (val === "ollama") groupOllama.classList.remove("hidden");
   else if (val === "gemini") groupGemini.classList.remove("hidden");
+  else if (val === "gemini_web") {
+    if (groupGeminiWeb) groupGeminiWeb.classList.remove("hidden");
+  }
   else groupOpenai.classList.remove("hidden");
 
   loadModelList();
@@ -638,6 +650,7 @@ async function loadModelList() {
     let list = [];
     if (prov === "ollama") list = data.ollama || [];
     else if (prov === "gemini") list = data.gemini || [];
+    else if (prov === "gemini_web") list = data.gemini_web || ["gemini-flash", "gemini-pro", "gemini-flash-lite"];
     else list = data.openai || [];
 
     const currModel = (cfgModel.value || "").trim();
@@ -735,6 +748,9 @@ async function runConnectionTest() {
     provider: provider,
     ollama_host: cfgOllamaHost ? cfgOllamaHost.value.trim() : "",
     gemini_api_key: cfgGeminiKey ? cfgGeminiKey.value.trim() : "",
+    secure_1psid: cfgGeminiWeb1psid ? cfgGeminiWeb1psid.value.trim() : "",
+    secure_1psidts: cfgGeminiWeb1psidts ? cfgGeminiWeb1psidts.value.trim() : "",
+    gemini_web_proxy: cfgGeminiWebProxy ? cfgGeminiWebProxy.value.trim() : "",
     openai_api_key: cfgOpenaiKey ? cfgOpenaiKey.value.trim() : "",
     openai_base_url: cfgOpenaiUrl ? cfgOpenaiUrl.value.trim() : ""
   };
@@ -2990,6 +3006,9 @@ async function saveSettings() {
     model: cfgModel.value.trim(),
     ollama_host: cfgOllamaHost.value.trim(),
     gemini_api_key: cfgGeminiKey.value.trim(),
+    gemini_web_secure_1psid: cfgGeminiWeb1psid ? cfgGeminiWeb1psid.value.trim() : "",
+    gemini_web_secure_1psidts: cfgGeminiWeb1psidts ? cfgGeminiWeb1psidts.value.trim() : "",
+    gemini_web_proxy: cfgGeminiWebProxy ? cfgGeminiWebProxy.value.trim() : "",
     openai_api_key: cfgOpenaiKey.value.trim(),
     openai_base_url: cfgOpenaiUrl.value.trim(),
     tts_voice: cfgTtsVoice.value,

@@ -406,6 +406,7 @@
             <select id="cfg-provider" class="custom-select">
               <option value="ollama">本地離線 (Ollama)</option>
               <option value="gemini">Google Gemini API (雲端高速)</option>
+              <option value="gemini_web">🌐 Google Gemini 網頁版 (免 API Key，Cookie 串接)</option>
               <option value="openai">OpenAI / 相容格式 (DeepSeek, Groq 等)</option>
             </select>
           </div>
@@ -422,6 +423,26 @@
             <label>Google Gemini API Key</label>
             <input type="password" id="cfg-gemini-key" placeholder="貼上 AI Studio 取得的 API Key">
             <div class="field-hint">前往 Google AI Studio 即可免費獲取 API Key</div>
+          </div>
+
+          <!-- Gemini Web (Cookie Based via gemini-webapi) -->
+          <div class="form-group provider-option hidden" id="group-gemini-web">
+            <div class="preset-chips-group">
+              <span class="preset-label">💡 提示：使用 Google 帳號 Cookie 免費連線（免 API Key）</span>
+            </div>
+            <label style="margin-top: 6px;">__Secure-1PSID Cookie <span style="color: #ff6b6b;">*</span></label>
+            <input type="password" id="cfg-gemini-web-1psid" placeholder="貼上 __Secure-1PSID (長字串)">
+            <label style="margin-top: 10px;">__Secure-1PSIDTS Cookie (選填，但強烈建議填寫)</label>
+            <input type="password" id="cfg-gemini-web-1psidts" placeholder="貼上 __Secure-1PSIDTS (若瀏覽器 Cookie 中有此項請填寫)">
+            <label style="margin-top: 10px;">Proxy 代理伺服器 (選填)</label>
+            <input type="text" id="cfg-gemini-web-proxy" placeholder="例如 http://127.0.0.1:7890 (若所在地區受限請填寫)">
+            <div class="field-hint" style="line-height: 1.6; margin-top: 6px;">
+              🔍 <strong>如何獲取 Cookie：</strong><br>
+              1. 開啟並登入 <a href="https://gemini.google.com" target="_blank" style="color: var(--primary); text-decoration: underline;">gemini.google.com</a><br>
+              2. 按鍵盤 <code>F12</code> 開啟開發者工具 → 切換至 <strong>Application (應用程式)</strong> 或 <strong>儲存空間</strong><br>
+              3. 點開左側 <strong>Cookies</strong> → 點擊 <code>https://gemini.google.com</code><br>
+              4. 找到 <code>__Secure-1PSID</code> 與 <code>__Secure-1PSIDTS</code>，複製其 Value 貼到此處即可！
+            </div>
           </div>
 
           <!-- OpenAI / Compatible -->
