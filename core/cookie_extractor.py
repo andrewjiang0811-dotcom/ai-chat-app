@@ -92,28 +92,38 @@ def _decrypt_chromium_cookie_value(enc_val: bytes, master_key: bytes) -> str:
     return ""
 
 
-def extract_from_cdp(port: int = 9222) -> Tuple[bool, Dict[str, str], str]:
+def extract_from_cdp(ports: Optional[list] = None) -> Tuple[bool, Dict[str, str], str]:
     """
     透過 Chrome DevTools Protocol (CDP) 遠端偵錯埠
     直接從正在運行的無痕視窗（Incognito / InPrivate）記憶體中讀取 Cookie！
     零硬碟存取、不受檔案鎖定限制！
     """
+    if ports is None:
+        ports = [9225, 9222]
+    
     import asyncio
-    try:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            import nest_asyncio
-            nest_asyncio.apply()
-            return loop.run_until_complete(_extract_from_cdp_async(port))
-        else:
-            return asyncio.run(_extract_from_cdp_async(port))
-    except RuntimeError:
-        return asyncio.run(_extract_from_cdp_async(port))
-    except Exception as e:
-        return False, {}, f"CDP 檢測失敗: {e}"
+    for p in ports:
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                import nest_asyncio
+                nest_asyncio.apply()
+                ok, cookies, msg = loop.run_until_complete(_extract_from_cdp_async(p))
+            else:
+                ok, cookies, msg = asyncio.run(_extract_from_cdp_async(p))
+            if ok and cookies.get("__Secure-1PSID"):
+                return ok, cookies, msg
+        except RuntimeError:
+            ok, cookies, msg = asyncio.run(_extract_from_cdp_async(p))
+            if ok and cookies.get("__Secure-1PSID"):
+                return ok, cookies, msg
+        except Exception:
+            pass
+
+    return False, {}, "未在指定除錯埠偵測到無痕瀏覽器"
 
 
-async def _extract_from_cdp_async(port: int = 9222) -> Tuple[bool, Dict[str, str], str]:
+async def _extract_from_cdp_async(port: int = 9225) -> Tuple[bool, Dict[str, str], str]:
     try:
         import aiohttp
     except ImportError:
@@ -122,7 +132,7 @@ async def _extract_from_cdp_async(port: int = 9222) -> Tuple[bool, Dict[str, str
     url = f"http://127.0.0.1:{port}/json"
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get(url, timeout=aiohttp.ClientTimeout(total=1.5)) as resp:
+            async with session.get(url, timeout=aiohttp.ClientTimeout(total=1.2)) as resp:
                 if resp.status != 200:
                     return False, {}, "CDP 埠未回應"
                 tabs = await resp.json()
@@ -296,7 +306,7 @@ def get_or_sync_gemini_cookies(base_dir: Optional[str] = None) -> Dict[str, str]
     dev_profile_dir = os.path.join(base_dir, "data", "dev_profile")
 
     # 1. 優先嘗試透過 CDP (Chrome DevTools Protocol) 直接讀取無痕視窗的記憶體 Cookie！
-    cdp_ok, cdp_cookies, cdp_msg = extract_from_cdp(9222)
+    cdp_ok, cdp_cookies, cdp_msg = extract_from_cdp([9225, 9222])
     if cdp_ok and cdp_cookies.get("__Secure-1PSID"):
         print(f"[CookieSync] {cdp_msg}")
         _save_synced_cookies(config_file, cookie_file, cdp_cookies)

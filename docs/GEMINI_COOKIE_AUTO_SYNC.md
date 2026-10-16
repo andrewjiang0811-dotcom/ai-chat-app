@@ -59,11 +59,13 @@ Chromium（Edge / Chrome）的無痕模式（Incognito / InPrivate）設計宗�
 #### 方案 A：使用 CDP 遠端除錯埠（直讀無痕視窗的 RAM 記憶體，最推薦）
 我們為您準備了一鍵啟動批次檔 [tools/launch_gemini_inprivate.bat](file:///c:/WorkFolder/MyProject/ai-chat-app/tools/launch_gemini_inprivate.bat)：
 ```bash
-# 啟動時加入 CDP 除錯參數：
-msedge.exe --inprivate --remote-debugging-port=9222 "https://gemini.google.com"
+# 啟動時加入 CDP 除錯參數與獨立暫存進程（使用 Port 9225）：
+msedge.exe --inprivate --user-data-dir="%TEMP%\edge_inprivate_gemini" --remote-debugging-port=9225 "https://gemini.google.com"
 ```
-- **運作原理**：產圖腳本 `core/cookie_extractor.py` 會自動連線 `http://127.0.0.1:9222`，透過 Chrome DevTools Protocol 穿透直接取得**記憶體中最新鮮的 Cookie**。
-- **優勢**：完全不需要關閉瀏覽器，**永遠不會遇到檔案鎖定占用問題**！
+- **運作原理**：產圖腳本 `core/cookie_extractor.py` 會自動連線 `http://127.0.0.1:9225`（及 9222），透過 Chrome DevTools Protocol 穿透直接取得**無痕記憶體中最新鮮的 Cookie**。
+- **優勢**：
+  1. 採用專用 Port 9225 與獨立暫存進程，日常 Edge 怎麼開都**絕不衝突、絕不被合併**！
+  2. 完全不需要關閉任何瀏覽器，**100% 絕不發生檔案鎖定問題**！
 
 #### 方案 B：使用獨立開發 Profile（dev_profile，兼具無痕與持久化）
 點擊執行 [tools/launch_gemini_dev_profile.bat](file:///c:/WorkFolder/MyProject/ai-chat-app/tools/launch_gemini_dev_profile.bat)：
