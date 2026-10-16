@@ -108,7 +108,11 @@ ai_chat_app/
   - 眼睛與領帶色相保護、邊緣去綠光溢色（Despill）與 `1515px` 垂直基準線對齊標準。
 - ⚡ [AI 等待回覆 / 思考中動態指示器說明 (docs/THINKING_INDICATOR_FEATURE.md)](docs/THINKING_INDICATOR_FEATURE.md)
   - 三階段漸進式等待提示文案、跳動波浪圓點、全主題適配與立繪思考姿態連動。
+- 🐱 [傲嬌貓娘橫幅形象與立繪子資料夾架構 (docs/TSUNDERE_CATGIRL_SPRITE_AND_STORAGE.md)](docs/TSUNDERE_CATGIRL_SPRITE_AND_STORAGE.md)
+  - 專為橫幅配置 (16:9) 打造的慵懶趴臥傲嬌貓娘咪嚕，專屬傲嬌情緒字眼與六大觸碰熱區。
+  - 立繪圖片子資料夾分類儲存架構重構（`data/avatars/{persona_id}/`）。
 - 🌐 [Google Gemini 網頁版 Cookie 憑證串接說明 (docs/GEMINI_WEBAPI_INTEGRATION.md)](docs/GEMINI_WEBAPI_INTEGRATION.md)
   - 免 API Key、零額度限制的 Google Gemini 網頁版串接指南與連線診斷。
+
 
 

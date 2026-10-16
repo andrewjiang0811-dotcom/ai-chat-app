@@ -141,16 +141,17 @@ async def upload_persona_avatar_file(
     file: UploadFile = File(...),
     display_mode: Optional[str] = Form(None)
 ):
-    os.makedirs(AVATARS_DIR, exist_ok=True)
+    persona_dir = os.path.join(AVATARS_DIR, persona_id)
+    os.makedirs(persona_dir, exist_ok=True)
     ext = os.path.splitext(file.filename)[1].lower() if file.filename else ".png"
     if not ext or ext not in [".png", ".jpg", ".jpeg", ".webp", ".gif", ".jfif"]:
         ext = ".png"
-    filename = f"{persona_id}_{uuid.uuid4().hex[:8]}{ext}"
-    filepath = os.path.join(AVATARS_DIR, filename)
+    filename = f"avatar_{uuid.uuid4().hex[:8]}{ext}"
+    filepath = os.path.join(persona_dir, filename)
     content = await file.read()
     with open(filepath, "wb") as f:
         f.write(content)
-    image_url = f"/avatars/{filename}"
+    image_url = f"/avatars/{persona_id}/{filename}"
     updated = update_persona_avatar(persona_id, image_url, display_mode)
     return updated
 
@@ -169,16 +170,17 @@ async def upload_persona_emotion_avatar_file(
     emotion: str,
     file: UploadFile = File(...)
 ):
-    os.makedirs(AVATARS_DIR, exist_ok=True)
+    persona_dir = os.path.join(AVATARS_DIR, persona_id)
+    os.makedirs(persona_dir, exist_ok=True)
     ext = os.path.splitext(file.filename)[1].lower() if file.filename else ".png"
     if not ext or ext not in [".png", ".jpg", ".jpeg", ".webp", ".gif", ".jfif"]:
         ext = ".png"
-    filename = f"{persona_id}_{emotion}_{uuid.uuid4().hex[:8]}{ext}"
-    filepath = os.path.join(AVATARS_DIR, filename)
+    filename = f"{emotion}_{uuid.uuid4().hex[:8]}{ext}"
+    filepath = os.path.join(persona_dir, filename)
     content = await file.read()
     with open(filepath, "wb") as f:
         f.write(content)
-    image_url = f"/avatars/{filename}"
+    image_url = f"/avatars/{persona_id}/{filename}"
     updated = update_persona_emotion_avatar(persona_id, emotion, image_url)
     return updated
 
