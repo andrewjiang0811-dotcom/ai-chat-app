@@ -233,7 +233,9 @@ async def main():
             print(f"\n[{emo}] Raw image already exists: {raw_target}")
 
         # Now chroma key and save
-        avatar_path = os.path.join(AVATAR_DIR, f"assistant_{emo}.png")
+        assistant_dir = os.path.join(AVATAR_DIR, "assistant")
+        os.makedirs(assistant_dir, exist_ok=True)
+        avatar_path = os.path.join(assistant_dir, f"{emo}.png")
         artifact_path = os.path.join(ARTIFACT_DIR, f"assistant_{emo}.png")
         try:
             chroma_key(raw_target, avatar_path)

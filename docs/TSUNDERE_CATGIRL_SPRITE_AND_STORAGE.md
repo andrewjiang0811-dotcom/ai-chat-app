@@ -67,6 +67,11 @@ data/avatars/
    - 萬能助理全表情路徑全面更新為 `/avatars/assistant/*.png`。
    - 傲嬌貓娘立繪路徑配置為 `/avatars/tsundere_cat/default.png`，並啟用 `full_body` 橫幅展示。
 
+### 3.3 舊前綴立繪清理與目錄淨化
+隨著圖片分類儲存機制正式上線，原先散落在 `data/avatars/` 根目錄下的 7 個舊格式立繪檔案（`assistant_*.png`）已全數安全清除：
+* 已移除：`assistant_default.png`, `assistant_happy.png`, `assistant_shy.png`, `assistant_angry.png`, `assistant_sad.png`, `assistant_surprised.png`, `assistant_thinking.png`
+* 目前 `data/avatars/` 根目錄僅保留各角色的專屬分類資料夾（`assistant/`、`tsundere_cat/`），徹底避免檔案混雜堆放。
+
 ---
 
 ## 4. 驗證與測試
