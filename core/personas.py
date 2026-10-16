@@ -53,6 +53,9 @@ DEFAULT_PERSONAS = [
     }
 ]
 
+TOUCH_ZONES_DIR = os.path.join(DATA_DIR, "touch_zones")
+os.makedirs(TOUCH_ZONES_DIR, exist_ok=True)
+
 DEFAULT_TOUCH_ZONES = [
     {
         "id": "head_touch",
@@ -89,6 +92,64 @@ DEFAULT_TOUCH_ZONES = [
     }
 ]
 
+def get_persona_touch_zones_path(persona_id: str) -> str:
+    """取得特定形象的獨立熱區設定檔案路徑"""
+    return os.path.join(TOUCH_ZONES_DIR, f"{persona_id}.json")
+
+def load_persona_touch_zones(persona_id: str, fallback_zones: List[Dict] = None) -> List[Dict]:
+    """
+    依形象獨立載入觸碰熱區設定：
+    1. 優先從 data/touch_zones/{persona_id}.json 讀取
+    2. 若獨立檔案尚不存在，則採用傳入的 fallback_zones (如 personas.json 中的舊設定) 並自動生成獨立檔案
+    3. 若皆無，則採用 DEFAULT_TOUCH_ZONES
+    """
+    os.makedirs(TOUCH_ZONES_DIR, exist_ok=True)
+    file_path = get_persona_touch_zones_path(persona_id)
+
+    if os.path.exists(file_path):
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                zones = json.load(f)
+                if isinstance(zones, list) and len(zones) > 0:
+                    return zones
+        except Exception as e:
+            print(f"Error reading touch zones for {persona_id}: {e}")
+
+    # 若獨立檔案尚未建立，使用 fallback 並自動儲存為獨立檔案完成遷移
+    initial_zones = fallback_zones if (fallback_zones and len(fallback_zones) > 0) else [dict(z) for z in DEFAULT_TOUCH_ZONES]
+    save_persona_touch_zones(persona_id, initial_zones, sync_to_personas_json=False)
+    return initial_zones
+
+def save_persona_touch_zones(persona_id: str, touch_zones: List[Dict], sync_to_personas_json: bool = True):
+    """
+    依形象獨立儲存觸碰熱區設定至 data/touch_zones/{persona_id}.json，
+    並可同步更新至 personas.json 以保持向後相容性。
+    """
+    os.makedirs(TOUCH_ZONES_DIR, exist_ok=True)
+    file_path = get_persona_touch_zones_path(persona_id)
+
+    try:
+        with open(file_path, "w", encoding="utf-8") as f:
+            json.dump(touch_zones, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"Error saving touch zones for {persona_id}: {e}")
+
+    if sync_to_personas_json and os.path.exists(PERSONAS_FILE):
+        try:
+            with open(PERSONAS_FILE, "r", encoding="utf-8") as f:
+                personas = json.load(f)
+            updated = False
+            for p in personas:
+                if p.get("id") == persona_id:
+                    p["touch_zones"] = touch_zones
+                    updated = True
+                    break
+            if updated:
+                with open(PERSONAS_FILE, "w", encoding="utf-8") as f:
+                    json.dump(personas, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            print(f"Error syncing touch zones to personas.json: {e}")
+
 def load_personas() -> List[Dict]:
     os.makedirs(DATA_DIR, exist_ok=True)
     if not os.path.exists(PERSONAS_FILE):
@@ -104,6 +165,7 @@ def load_personas() -> List[Dict]:
                 if default_p["id"] not in existing_ids:
                     personas.append(default_p)
             for p in personas:
+                pid = p["id"]
                 if "image_url" not in p:
                     p["image_url"] = ""
                 if "display_mode" not in p:
@@ -112,8 +174,11 @@ def load_personas() -> List[Dict]:
                     p["emotions"] = {"default": p.get("image_url", "")}
                 elif "default" not in p["emotions"] and p.get("image_url"):
                     p["emotions"]["default"] = p["image_url"]
-                if "touch_zones" not in p or not isinstance(p["touch_zones"], list):
-                    p["touch_zones"] = [dict(z) for z in DEFAULT_TOUCH_ZONES]
+                
+                # 依不同形象獨立讀取 touch_zones
+                raw_zones = p.get("touch_zones")
+                p["touch_zones"] = load_persona_touch_zones(pid, fallback_zones=raw_zones)
+
                 if "auto_emotion" not in p:
                     p["auto_emotion"] = True
                 if "emotion_method" not in p:
@@ -182,15 +247,8 @@ def delete_persona_emotion_avatar(persona_id: str, emotion: str) -> Dict:
     return target or get_persona(persona_id)
 
 def update_persona_touch_zones(persona_id: str, touch_zones: List[Dict]) -> Dict:
-    personas = load_personas()
-    target = None
-    for p in personas:
-        if p["id"] == persona_id:
-            p["touch_zones"] = touch_zones
-            target = p
-            break
-    save_personas(personas)
-    return target or get_persona(persona_id)
+    save_persona_touch_zones(persona_id, touch_zones, sync_to_personas_json=True)
+    return get_persona(persona_id)
 
 def update_persona_emotion_settings(persona_id: str, auto_emotion: bool, emotion_method: str = "rules") -> Dict:
     personas = load_personas()

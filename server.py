@@ -27,6 +27,7 @@ from core.personas import (
     update_persona_emotion_avatar,
     delete_persona_emotion_avatar,
     update_persona_touch_zones,
+    load_persona_touch_zones,
     update_persona_emotion_settings,
     remove_persona_backgrounds
 )
@@ -196,6 +197,11 @@ async def upload_persona_emotion_avatar_file(
 @app.delete("/api/personas/{persona_id}/emotions/{emotion}")
 async def remove_persona_emotion_avatar_file(persona_id: str, emotion: str):
     return delete_persona_emotion_avatar(persona_id, emotion)
+
+@app.get("/api/personas/{persona_id}/touch_zones")
+async def get_persona_touch_zones_endpoint(persona_id: str):
+    zones = load_persona_touch_zones(persona_id)
+    return {"persona_id": persona_id, "touch_zones": zones}
 
 @app.put("/api/personas/{persona_id}/touch_zones")
 async def save_persona_touch_zones(persona_id: str, req: Request):

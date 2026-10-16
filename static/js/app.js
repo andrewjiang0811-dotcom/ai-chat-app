@@ -1183,9 +1183,45 @@ function setSpriteEmotion(emotion, options = {}) {
   }
 }
 
+// 精準將觸碰熱區覆蓋層貼合至角色立繪圖片 (100% 像素級吻合，徹底杜絕 CSS 容器未撐開或位移問題)
+function syncTouchOverlayBounds() {
+  if (!spriteTouchOverlay || !characterSprite) return;
+  if (characterSprite.classList.contains("hidden") || !characterSprite.src) {
+    spriteTouchOverlay.style.display = "none";
+    return;
+  }
+  spriteTouchOverlay.style.display = "";
+
+  // 取得 characterSprite 實際渲染尺寸與相對於 offsetParent (即 sprite-anchor) 的精準偏移
+  const imgW = characterSprite.offsetWidth;
+  const imgH = characterSprite.offsetHeight;
+  const imgTop = characterSprite.offsetTop;
+  const imgLeft = characterSprite.offsetLeft;
+
+  if (imgW > 0 && imgH > 0) {
+    spriteTouchOverlay.style.position = "absolute";
+    spriteTouchOverlay.style.top = `${imgTop}px`;
+    spriteTouchOverlay.style.left = `${imgLeft}px`;
+    spriteTouchOverlay.style.width = `${imgW}px`;
+    spriteTouchOverlay.style.height = `${imgH}px`;
+  }
+}
+
+// 監聽立繪圖片載入完成，即時同步熱區層邊界
+if (characterSprite) {
+  characterSprite.addEventListener("load", () => {
+    syncTouchOverlayBounds();
+    renderTouchOverlay();
+  });
+}
+window.addEventListener("resize", () => {
+  syncTouchOverlayBounds();
+});
+
 // 渲染角色立繪身上的觸碰感應熱區
 function renderTouchOverlay() {
   if (!spriteTouchOverlay) return;
+  syncTouchOverlayBounds();
   spriteTouchOverlay.innerHTML = "";
 
   // 視角模式下熱區不作用（讓拖曳與縮放順暢進行）
@@ -2414,6 +2450,7 @@ function applySpriteView({ animate = false } = {}) {
   spriteTransform.classList.toggle("animated", animate);
   spriteTransform.style.transform = `translate(${x}%, ${y}%) scale(${scale})`;
   spriteZoomLabel.textContent = `${Math.round(scale * 100)}%`;
+  syncTouchOverlayBounds();
 }
 
 // 限制平移範圍，避免把立繪完全拖出畫面外找不回來

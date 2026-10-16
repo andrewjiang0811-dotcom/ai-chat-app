@@ -1,0 +1,79 @@
+[
+  {
+    "id": "head_touch",
+    "name": "頭部 / 雙馬尾 (摸摸頭)",
+    "emotion": "happy",
+    "priority": 1,
+    "dialogue": "（被輕輕撫摸了雙馬尾）嘿嘿～好舒服呀，謝謝你！✨",
+    "x": 24,
+    "y": 3,
+    "width": 52,
+    "height": 11
+  },
+  {
+    "id": "face_touch",
+    "name": "臉頰 / 嘴部 (捏捏臉)",
+    "emotion": "shy",
+    "priority": 2,
+    "dialogue": "（臉頰泛起微紅）等等...別突然戳人家的臉啦///",
+    "x": 37,
+    "y": 13,
+    "width": 26,
+    "height": 9
+  },
+  {
+    "id": "chest_touch",
+    "name": "胸口 / 校服領帶 (心跳加速)",
+    "emotion": "surprised",
+    "priority": 3,
+    "dialogue": "（慌慌張張護住胸口）呀！碰那裡太突然了啦...心跳都變快了！",
+    "x": 32,
+    "y": 22,
+    "width": 36,
+    "height": 13
+  },
+  {
+    "id": "hands_touch",
+    "name": "纖腰 / 交疊雙手 (牽牽手)",
+    "emotion": "happy",
+    "priority": 4,
+    "dialogue": "（溫暖地回牽住你的手）想牽手嗎？我的手很暖和吧，隨時都在這裡陪著你喔！",
+    "x": 28,
+    "y": 35,
+    "width": 44,
+    "height": 12
+  },
+  {
+    "id": "skirt_touch",
+    "name": "白色百褶裙 (害羞壓裙擺)",
+    "emotion": "angry",
+    "priority": 5,
+    "dialogue": "（氣呼呼地壓緊百褶裙擺）哇！你在摸哪裡呀！大笨蛋，要生氣了喔！哼！",
+    "x": 22,
+    "y": 47,
+    "width": 56,
+    "height": 11
+  },
+  {
+    "id": "legs_touch",
+    "name": "黑過膝襪 / 絕對領域 (輕觸長腿)",
+    "emotion": "shy",
+    "priority": 6,
+    "dialogue": "（雙腿微微併攏，害羞地側過頭）嗚...盯著長襪看就算了，怎麼還動手碰呀...///",
+    "x": 30,
+    "y": 58,
+    "width": 40,
+    "height": 25
+  },
+  {
+    "id": "shoes_touch",
+    "name": "黑色小皮鞋 / 腳尖 (踩碎步)",
+    "emotion": "thinking",
+    "priority": 7,
+    "dialogue": "（低頭好奇看了看自己的小皮鞋）鞋子上有沾到灰塵嗎？謝謝你的提醒～",
+    "x": 36,
+    "y": 84,
+    "width": 36,
+    "height": 14
+  }
+]

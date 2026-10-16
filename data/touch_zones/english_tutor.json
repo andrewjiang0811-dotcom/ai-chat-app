@@ -1,0 +1,90 @@
+[
+  {
+    "id": "head_touch",
+    "name": "金色長捲髮 (摸摸頭讚賞)",
+    "emotion": "happy",
+    "priority": 1,
+    "dialogue": "（被輕輕撫摸了金髮，露出溫柔鼓勵的笑容）Your English pronunciation has improved so much! Keep up the good work! ✨",
+    "x": 28,
+    "y": 2,
+    "width": 38,
+    "height": 10
+  },
+  {
+    "id": "face_touch",
+    "name": "金絲眼鏡 / 臉頰 (扶眼鏡 / 捏臉)",
+    "emotion": "shy",
+    "priority": 2,
+    "dialogue": "（臉頰泛起微紅，輕輕扶了扶鏡框）Oh my... looking into your eyes this closely makes my heart flutter a bit. ///",
+    "x": 33,
+    "y": 12,
+    "width": 29,
+    "height": 9
+  },
+  {
+    "id": "chest_touch",
+    "name": "白襯衫胸口 / 西裝領 (私人家教)",
+    "emotion": "surprised",
+    "priority": 3,
+    "dialogue": "（略顯驚訝地護住胸前）Oh! That was a little too close for a private tutoring session, wasn't it? (giggles)",
+    "x": 30,
+    "y": 21,
+    "width": 35,
+    "height": 12
+  },
+  {
+    "id": "clipboard_touch",
+    "name": "教案板夾 / 講義原子筆 (翻看筆記)",
+    "emotion": "thinking",
+    "priority": 4,
+    "dialogue": "（優雅翻動手上的教案板夾）Let's see what topic we should practice next. How about we discuss your day in English?",
+    "x": 56,
+    "y": 24,
+    "width": 36,
+    "height": 19
+  },
+  {
+    "id": "hands_touch",
+    "name": "纖腰與手部 (牽牽手加油)",
+    "emotion": "happy",
+    "priority": 5,
+    "dialogue": "（溫柔地反握住你的手）Confidence is key in speaking English. Don't be afraid to make mistakes, I'm right here with you!",
+    "x": 16,
+    "y": 34,
+    "width": 30,
+    "height": 14
+  },
+  {
+    "id": "skirt_touch",
+    "name": "深藍合身窄裙 (專心上課)",
+    "emotion": "angry",
+    "priority": 6,
+    "dialogue": "（雙手叉在腰際，嚴肅又可愛地微蹙眉頭）Hey! Eyes on the whiteboard, student! Focus on the grammar lesson, please! 💢",
+    "x": 20,
+    "y": 47,
+    "width": 46,
+    "height": 13
+  },
+  {
+    "id": "legs_touch",
+    "name": "透膚黑絲美腿 (輕觸黑絲長腿)",
+    "emotion": "shy",
+    "priority": 7,
+    "dialogue": "（微偏過身子，臉頰微燙地輕咳一聲）Ahem... Are my pantyhose distracting you from the lesson? Let's stay focused! ///",
+    "x": 26,
+    "y": 60,
+    "width": 40,
+    "height": 24
+  },
+  {
+    "id": "shoes_touch",
+    "name": "黑色漆皮高跟鞋 (腳尖 / 掉筆)",
+    "emotion": "sad",
+    "priority": 8,
+    "dialogue": "（同理溫柔地稍微欠身關心）Did you drop your pen? Be careful down there, let me pick it up for you.",
+    "x": 30,
+    "y": 85,
+    "width": 32,
+    "height": 13
+  }
+]
