@@ -18,8 +18,11 @@ if sys.stderr and hasattr(sys.stderr, "reconfigure"):
     except Exception:
         pass
 
-def run_uvicorn(host: str, port: int):
-    uvicorn.run(app, host=host, port=port, log_level="warning")
+def run_uvicorn(host: str, port: int, reload: bool = False):
+    if reload:
+        uvicorn.run("server:app", host=host, port=port, reload=True, log_level="warning")
+    else:
+        uvicorn.run(app, host=host, port=port, log_level="warning")
 
 def wait_for_server(url: str, timeout: float = 6.0):
     start = time.time()
@@ -47,9 +50,9 @@ def main():
     print("=" * 60)
 
     if args.web_only:
-        print("💡 目前以【純網頁模式】運行，請在瀏覽器打開上述網址。")
+        print("💡 目前以【純網頁模式 (自動熱重載)】運行，請在瀏覽器打開上述網址。")
         print("👉 按 Ctrl + C 可結束程式。")
-        run_uvicorn(args.host, args.port)
+        run_uvicorn(args.host, args.port, reload=True)
         return
 
     # Desktop Window Mode via pywebview

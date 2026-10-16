@@ -2632,6 +2632,74 @@ async function deleteSession(sessionId) {
   }
 }
 
+// Thinking & Typing Indicator for AI Waiting
+function renderThinkingIndicator(container) {
+  let icon = "✨";
+  let defaultText = "正在思考中...";
+  let waitingText = "深入思考中，即將回覆...";
+  let finalWaitingText = "正在組織語言，請稍候片刻...";
+
+  if (state.chatTheme === "line") {
+    icon = "💬";
+    defaultText = "對方正在輸入...";
+    waitingText = "正在輸入較長內容...";
+    finalWaitingText = "即將送出回覆...";
+  } else if (state.chatTheme === "parchment") {
+    icon = "🖋️";
+    defaultText = "執筆沉思中...";
+    waitingText = "字斟句酌，即將落款...";
+    finalWaitingText = "墨韻凝思，續寫篇章中...";
+  } else if (state.chatTheme === "book") {
+    icon = "📖";
+    defaultText = "研墨沉思中...";
+    waitingText = "翻閱古籍，即將撰就...";
+    finalWaitingText = "博覽群書，字句凝練中...";
+  }
+
+  container.innerHTML = `
+    <div class="thinking-indicator" role="status" aria-live="polite">
+      <div class="thinking-glow-icon">${icon}</div>
+      <div class="thinking-body">
+        <div class="thinking-dots">
+          <span class="dot"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+        </div>
+        <span class="thinking-label">${defaultText}</span>
+      </div>
+    </div>
+  `;
+
+  const t1 = setTimeout(() => {
+    const label = container.querySelector(".thinking-label");
+    if (label) {
+      label.style.opacity = "0";
+      setTimeout(() => {
+        label.textContent = waitingText;
+        label.style.opacity = "1";
+      }, 250);
+    }
+  }, 3500);
+
+  const t2 = setTimeout(() => {
+    const label = container.querySelector(".thinking-label");
+    if (label) {
+      label.style.opacity = "0";
+      setTimeout(() => {
+        label.textContent = finalWaitingText;
+        label.style.opacity = "1";
+      }, 250);
+    }
+  }, 8000);
+
+  return {
+    clear: () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    }
+  };
+}
+
 // Chat Sending & Streaming
 async function handleSend() {
   if (state.isStreaming) return;
@@ -2672,11 +2740,18 @@ async function handleSend() {
   const assistantBubbleCard = assistantBubble.querySelector(".msg-bubble");
   assistantBubbleCard?.classList.add("speaking-bubble");
 
+  // 1. 渲染思考中指示器 (Thinking / Typing Indicator)
+  const thinkingHandler = renderThinkingIndicator(bubbleContent);
+
+  // 2. 連動角色立繪進入專注思考姿態
+  setSpriteEmotion("thinking", { temporary: true, duration: 30000 });
+
   // Toggle Streaming UI & Character Speaking Animation
   setStreamingState(true);
 
   state.abortController = new AbortController();
   let fullResponse = "";
+  let hasReceivedFirstChunk = false;
 
   try {
     const response = await fetch(`/api/sessions/${state.currentSessionId}/chat`, {
@@ -2710,6 +2785,13 @@ async function handleSend() {
           try {
             const data = JSON.parse(line.substring(6));
             if (data.type === "chunk") {
+              if (!hasReceivedFirstChunk) {
+                hasReceivedFirstChunk = true;
+                thinkingHandler.clear();
+                bubbleContent.innerHTML = "";
+                // 首批內容抵達，立繪恢復常態或配合說話動態
+                setSpriteEmotion("default");
+              }
               fullResponse += data.content;
               bubbleContent.innerHTML = marked.parse(fullResponse);
               hljs.highlightAll();
@@ -2728,6 +2810,9 @@ async function handleSend() {
     }
 
     // Complete
+    if (!hasReceivedFirstChunk) {
+      thinkingHandler.clear();
+    }
     bubbleContent.innerHTML = marked.parse(fullResponse);
     hljs.highlightAll();
     toolBar.classList.remove("hidden");
@@ -2739,6 +2824,10 @@ async function handleSend() {
 
     await loadSessionsQuiet();
   } catch (err) {
+    thinkingHandler.clear();
+    if (!hasReceivedFirstChunk) {
+      bubbleContent.innerHTML = "";
+    }
     if (err.name === "AbortError") {
       fullResponse += "\n\n*(已手動停止生成)*";
     } else {
@@ -2747,6 +2836,7 @@ async function handleSend() {
     bubbleContent.innerHTML = marked.parse(fullResponse);
     toolBar.classList.remove("hidden");
   } finally {
+    thinkingHandler.clear();
     assistantBubbleCard?.classList.remove("speaking-bubble");
     setStreamingState(false);
     scrollToBottom();
