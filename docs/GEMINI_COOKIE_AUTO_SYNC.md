@@ -57,23 +57,24 @@ Chromium（Edge / Chrome）的無痕模式（Incognito / InPrivate）設計宗�
 ### 3.2 三種指定並讀取無痕／專用環境的解決方案：
 
 #### 方案 A：使用 CDP 遠端除錯埠（直讀無痕視窗的 RAM 記憶體，最推薦）
-我們為您準備了一鍵啟動批次檔 [tools/launch_gemini_inprivate.bat](file:///c:/WorkFolder/MyProject/ai-chat-app/tools/launch_gemini_inprivate.bat)：
+我們為您準備了一鍵啟動批次檔 [tools/launch_gemini_inprivate.bat](file:///c:/WorkFolder/MyProject/ai-chat-app/tools/launch_gemini_inprivate.bat)（或 [tools/launch_gemini_incognito.bat](file:///c:/WorkFolder/MyProject/ai-chat-app/tools/launch_gemini_incognito.bat)）：
 ```bash
-# 啟動時加入 CDP 除錯參數與獨立暫存進程（使用 Port 9225）：
-msedge.exe --inprivate --user-data-dir="%TEMP%\edge_inprivate_gemini" --remote-debugging-port=9225 "https://gemini.google.com"
+# 預設以 Google Chrome 啟動，加入 CDP 除錯參數與獨立暫存進程（使用 Port 9225）：
+chrome.exe --incognito --user-data-dir="%TEMP%\chrome_incognito_gemini" --remote-debugging-port=9225 "https://gemini.google.com"
 ```
 - **運作原理**：產圖腳本 `core/cookie_extractor.py` 會自動連線 `http://127.0.0.1:9225`（及 9222），透過 Chrome DevTools Protocol 穿透直接取得**無痕記憶體中最新鮮的 Cookie**。
 - **優勢**：
-  1. 採用專用 Port 9225 與獨立暫存進程，日常 Edge 怎麼開都**絕不衝突、絕不被合併**！
-  2. 完全不需要關閉任何瀏覽器，**100% 絕不發生檔案鎖定問題**！
+  1. 預設使用 Google Chrome，並智慧偵測系統標準安裝路徑 `C:\Program Files\Google\Chrome\Application\chrome.exe`。
+  2. 採用專用 Port 9225 與獨立暫存進程，日常 Chrome 怎麼開都**絕不衝突、絕不被合併**！
+  3. 完全不需要關閉任何瀏覽器，**100% 絕不發生檔案鎖定問題**！
 
 #### 方案 B：使用獨立開發 Profile（dev_profile，兼具無痕與持久化）
 點擊執行 [tools/launch_gemini_dev_profile.bat](file:///c:/WorkFolder/MyProject/ai-chat-app/tools/launch_gemini_dev_profile.bat)：
 ```bash
-msedge.exe --user-data-dir="data/dev_profile" "https://gemini.google.com"
+chrome.exe --user-data-dir="data/dev_profile" "https://gemini.google.com"
 ```
 - **運作原理**：這是一個獨立於日常個人帳號的乾淨瀏覽環境（就像無痕一樣不受日常帳號干擾），但它的 Cookie 會存放在 `data/dev_profile/Default/Network/Cookies`。
-- **優勢**：日常使用的 Edge / Chrome 怎麼開、怎麼多開，都**絕不會占用或鎖定這個專用目錄**！
+- **優勢**：日常使用的 Chrome 怎麼開、怎麼多開，都**絕不會占用或鎖定這個專用目錄**！
 
 #### 方案 C：擴充功能允許在無痕模式中執行
 1. 前往 `edge://extensions` 或 `chrome://extensions`。
