@@ -111,6 +111,10 @@ ai_chat_app/
 - 🐱 [傲嬌貓娘橫幅形象與立繪子資料夾架構 (docs/TSUNDERE_CATGIRL_SPRITE_AND_STORAGE.md)](docs/TSUNDERE_CATGIRL_SPRITE_AND_STORAGE.md)
   - 專為橫幅配置 (16:9) 打造的慵懶趴臥傲嬌貓娘咪嚕，專屬傲嬌情緒字眼與六大觸碰熱區。
   - 立繪圖片子資料夾分類儲存架構重構（`data/avatars/{persona_id}/`）。
+- 🐾 [傲嬌貓娘全表情立繪補齊、觸碰熱區定位修復與 Gemini API 健全性優化 (docs/CATGIRL_EMOTIONS_AND_HOTSPOTS_FIX.md)](docs/CATGIRL_EMOTIONS_AND_HOTSPOTS_FIX.md)
+  - 引入 `.sprite-anchor` 解決熱區集中在上方空白處問題，實現像素級嚴絲合縫貼齊。
+  - 補齊 6 種全套情緒立繪（happy, shy, angry, surprised, thinking, sad），統一同軸 1280x757 無跳動去背透明 PNG。
+  - 修復 Gemini Web API `gemini-argon` 不可達錯誤，支援自動 fallback 與安全預設模型機制。
 - 🌐 [Google Gemini 網頁版 Cookie 憑證串接說明 (docs/GEMINI_WEBAPI_INTEGRATION.md)](docs/GEMINI_WEBAPI_INTEGRATION.md)
   - 免 API Key、零額度限制的 Google Gemini 網頁版串接指南與連線診斷。
 

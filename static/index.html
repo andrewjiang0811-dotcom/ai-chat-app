@@ -143,10 +143,13 @@
             <div class="sprite-container" id="sprite-container">
               <!-- Zoom / Pan Wrapper: 使用者縮放與拖曳平移套用在這層，與立繪本身的模式/呼吸動畫分開 -->
               <div class="sprite-transform" id="sprite-transform">
-                <!-- Actual Sprite Image -->
-                <img id="character-sprite" class="sprite-img mode-half-body hidden" src="" alt="角色立繪" draggable="false">
-                <!-- Interactive Touch Zones Overlay on Sprite -->
-                <div class="sprite-touch-overlay" id="sprite-touch-overlay"></div>
+                <!-- Character Sprite Anchor: 緊密貼合立繪本體的精準錨點容器，確保熱區 100% 吻合圖片真實邊界 -->
+                <div class="sprite-anchor" id="sprite-anchor">
+                  <!-- Actual Sprite Image -->
+                  <img id="character-sprite" class="sprite-img mode-half-body hidden" src="" alt="角色立繪" draggable="false">
+                  <!-- Interactive Touch Zones Overlay on Sprite -->
+                  <div class="sprite-touch-overlay" id="sprite-touch-overlay"></div>
+                </div>
               </div>
 
               <!-- Floating Interactive Reaction Bubble -->

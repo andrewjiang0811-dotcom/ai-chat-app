@@ -194,7 +194,13 @@
     "image_url": "/avatars/tsundere_cat/default.png",
     "display_mode": "full_body",
     "emotions": {
-      "default": "/avatars/tsundere_cat/default.png"
+      "default": "/avatars/tsundere_cat/default.png",
+      "happy": "/avatars/tsundere_cat/happy.png",
+      "shy": "/avatars/tsundere_cat/shy.png",
+      "angry": "/avatars/tsundere_cat/angry.png",
+      "surprised": "/avatars/tsundere_cat/surprised.png",
+      "thinking": "/avatars/tsundere_cat/thinking.png",
+      "sad": "/avatars/tsundere_cat/sad.png"
     },
     "touch_zones": [
       {
@@ -203,10 +209,10 @@
         "emotion": "shy",
         "priority": 1,
         "dialogue": "（黑貓耳敏銳地抖了兩下，臉紅轉頭）呀！突然揉人家的敏感耳尖幹嘛啦！笨蛋主人...才、才沒有覺得舒服呢，哼！💢",
-        "x": 10,
-        "y": 0,
-        "width": 28,
-        "height": 32
+        "x": 8,
+        "y": 3,
+        "width": 32,
+        "height": 36
       },
       {
         "id": "face_touch",
@@ -214,9 +220,9 @@
         "emotion": "angry",
         "priority": 2,
         "dialogue": "（氣呼呼地鼓起腮幫子，亮出小虎牙）別隨便戳咪嚕的臉啦！再戳...再戳我就要撲過去輕輕咬你了喔！嗷嗚～😾",
-        "x": 18,
-        "y": 32,
-        "width": 20,
+        "x": 16,
+        "y": 36,
+        "width": 22,
         "height": 26
       },
       {
@@ -225,10 +231,10 @@
         "emotion": "surprised",
         "priority": 3,
         "dialogue": "（鈴鐺叮鈴作響，身子微顫）叮鈴～！哇！幹嘛碰那裡啦...那可是你親手幫咪嚕繫上的，不准隨便亂扯！心跳都被你弄亂了啦...///",
-        "x": 29,
+        "x": 30,
         "y": 58,
-        "width": 14,
-        "height": 16
+        "width": 9,
+        "height": 14
       },
       {
         "id": "sweater_touch",
@@ -236,10 +242,10 @@
         "emotion": "happy",
         "priority": 4,
         "dialogue": "（舒服地把下巴在枕頭上蹭了蹭）呼喵～...既然你這麼想侍奉咪嚕，就特別准許你多摸幾下好了...這可不是喜歡你喔，只是毛衣太舒服了而已！✨",
-        "x": 35,
+        "x": 38,
         "y": 48,
-        "width": 28,
-        "height": 36
+        "width": 34,
+        "height": 44
       },
       {
         "id": "tail_touch",
@@ -247,21 +253,21 @@
         "emotion": "shy",
         "priority": 5,
         "dialogue": "（尾巴尖端猛地一縮，渾身微顫）喵嗚？！尾巴...尾巴是不能隨便抓的啦！笨蛋笨蛋...那裡明明很敏感的...下不為例喔///",
-        "x": 58,
-        "y": 4,
-        "width": 18,
-        "height": 52
+        "x": 60,
+        "y": 2,
+        "width": 16,
+        "height": 54
       },
       {
         "id": "feet_touch",
         "name": "微翹小腳丫 (搔搔腳尖)",
-        "emotion": "thinking",
+        "emotion": "angry",
         "priority": 6,
         "dialogue": "（腳趾下意識蜷縮了一下，踢了踢空氣）好癢喵！噗...住手啦！竟敢偷襲本貓咪的腳尖，下次咪嚕一定要抓花你的袖子！哼哼～🐾",
-        "x": 73,
-        "y": 12,
-        "width": 25,
-        "height": 50
+        "x": 75,
+        "y": 10,
+        "width": 24,
+        "height": 65
       }
     ],
     "auto_emotion": true,

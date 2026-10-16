@@ -13,11 +13,10 @@ except ImportError:
 DEFAULT_OLLAMA_HOST = "http://localhost:11434"
 
 DEFAULT_GEMINI_WEB_MODELS = [
+    "default",
     "gemini-flash",
     "gemini-pro",
-    "gemini-flash-lite",
-    "gemini-pro-advanced",
-    "gemini-flash-advanced"
+    "gemini-flash-lite"
 ]
 
 async def get_ollama_models(host: str = DEFAULT_OLLAMA_HOST) -> List[str]:
@@ -79,7 +78,13 @@ async def get_gemini_webapi_models(
             models_list = client.list_models()
             await client.close()
             if models_list:
-                return [getattr(m, "model_name", None) or getattr(m, "model_id", None) or str(m) for m in models_list]
+                valid_models = []
+                for m in models_list:
+                    name = getattr(m, "model_name", None) or getattr(m, "model_id", None) or str(m)
+                    if "argon" in name.lower():
+                        continue
+                    valid_models.append(name)
+                return valid_models if valid_models else DEFAULT_GEMINI_WEB_MODELS
         await client.close()
     except Exception:
         pass
@@ -603,7 +608,10 @@ async def stream_gemini_webapi(
                 yield f"❌ Gemini 網頁版認證失敗 (狀態碼: {status_val})，請檢查 Cookie 設定。"
             return
 
-        model_to_use = model or "gemini-flash"
+        # 處理模型名稱：如果為預設、gemini-flash 或 gemini-argon，設為 None 讓 Google 自動選取預設可用模型
+        model_to_use = None
+        if model and model not in ("default", "gemini-flash", "gemini-argon", ""):
+            model_to_use = model
         reasoning_active = False
 
         async for chunk in client.generate_content_stream(
