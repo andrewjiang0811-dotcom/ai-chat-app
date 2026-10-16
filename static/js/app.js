@@ -363,6 +363,18 @@ function setupEventListeners() {
     });
   }
 
+  const activePersonaBadge = document.getElementById("active-persona-badge");
+  if (activePersonaBadge) {
+    activePersonaBadge.style.cursor = "pointer";
+    activePersonaBadge.title = "點擊切換下一個對話角色 (Persona)";
+    activePersonaBadge.addEventListener("click", () => {
+      if (!state.personas || state.personas.length === 0) return;
+      const idx = state.personas.findIndex(p => p.id === state.currentPersonaId);
+      const nextIdx = (idx + 1) % state.personas.length;
+      setPersona(state.personas[nextIdx].id);
+    });
+  }
+
   // Toggle Character Stage (SillyTavern VN layout)
   btnToggleStage.addEventListener("click", () => {
     toggleStageVisibility();
@@ -869,7 +881,7 @@ async function loadPersonas() {
   }
 }
 
-function setPersona(personaId) {
+function setPersona(personaId, syncSession = true) {
   state.currentPersonaId = personaId;
   personaSelect.value = personaId;
   const p = state.personas.find(item => item.id === personaId);
@@ -902,7 +914,45 @@ function setPersona(personaId) {
     parchmentMainTitle.textContent = `與 ${p.name} 的手稿對話錄`;
   }
 
+  // 即時同步更新聊天面板中所有 AI 助理訊息的大頭像與角色名稱
+  updateChatAssistantAvatars(p);
+
+  // 同步更新當前 Session 的 character_id 到伺服器資料庫
+  if (syncSession && state.currentSessionId) {
+    fetch(`/api/sessions/${state.currentSessionId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ character_id: personaId })
+    }).catch(err => console.warn("Failed to sync session persona:", err));
+  }
+
   renderCharacterSprite(p);
+}
+
+// 動態更新聊天視窗中所有助理訊息的頭像與名稱
+function updateChatAssistantAvatars(persona) {
+  if (!persona) return;
+  const avatarHtml = getPersonaAvatarHtml(persona, "assistant");
+  const assistantRows = document.querySelectorAll(".message-row.assistant");
+  assistantRows.forEach(row => {
+    const avatarEl = row.querySelector(".msg-avatar");
+    const nameEl = row.querySelector(".speaker-name");
+    if (avatarEl) {
+      avatarEl.innerHTML = avatarHtml;
+    }
+    if (nameEl) {
+      nameEl.textContent = persona.name;
+    }
+  });
+}
+
+function getPersonaAvatarHtml(persona, role = "assistant") {
+  if (role === "user") return "👤";
+  if (!persona) return "🤖";
+  if (persona.avatar && (persona.avatar.startsWith("/") || persona.avatar.startsWith("http"))) {
+    return `<img src="${persona.avatar}" alt="${escapeHtml(persona.name)}" class="avatar-img">`;
+  }
+  return persona.avatar || "🤖";
 }
 
 function renderCharacterSprite(persona) {
@@ -2594,14 +2644,21 @@ async function switchSession(sessionId) {
     const data = await res.json();
     
     if (data.session && data.session.character_id) {
-      setPersona(data.session.character_id);
+      setPersona(data.session.character_id, false);
     }
 
     messageListEl.innerHTML = "";
     if (data.messages && data.messages.length > 0) {
       welcomeScreen.classList.add("hidden");
+      const currentPersona = state.personas.find(p => p.id === state.currentPersonaId);
+      const avatarHtml = getPersonaAvatarHtml(currentPersona, "assistant");
       data.messages.forEach(msg => {
-        appendMessageBubble(msg.role, msg.content);
+        appendMessageBubble(
+          msg.role,
+          msg.content,
+          msg.role === "assistant" ? avatarHtml : null,
+          msg.role === "assistant" ? currentPersona?.name : null
+        );
       });
       scrollToBottom();
     } else {
@@ -2870,8 +2927,8 @@ function appendMessageBubble(role, content, customAvatar, speakerName) {
   const row = document.createElement("div");
   row.className = `message-row ${role}`;
 
-  let avatarText = role === "user" ? "👤" : (customAvatar || "🤖");
   const p = state.personas.find(item => item.id === state.currentPersonaId);
+  let avatarText = role === "user" ? "👤" : (customAvatar || getPersonaAvatarHtml(p, role));
   const displayName = speakerName || (role === "assistant" ? (p?.name || "AI 角色") : "你");
   const timeStr = getCurrentTimeString();
 
