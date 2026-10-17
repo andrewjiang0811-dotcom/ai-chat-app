@@ -1,4 +1,51 @@
 // AI Chat App Frontend Logic (SillyTavern Style Support)
+
+// --- Multi-Device & Privacy Support ---
+const DEVICE_ID_KEY = "ai_chat_device_id";
+const DEVICE_NAME_KEY = "ai_chat_device_nickname";
+
+function getDeviceId() {
+  let id = localStorage.getItem(DEVICE_ID_KEY);
+  if (!id) {
+    const isLocal = window.location.hostname === "127.0.0.1" || 
+                    window.location.hostname === "localhost" || 
+                    window.location.hostname === "";
+    // If accessing from localhost/127.0.0.1, default to "default" so host preserves existing legacy sessions
+    id = isLocal ? "default" : "dev_" + Math.random().toString(36).substring(2, 10);
+    localStorage.setItem(DEVICE_ID_KEY, id);
+  }
+  return id;
+}
+
+function setDeviceId(newId) {
+  if (newId && newId.trim()) {
+    localStorage.setItem(DEVICE_ID_KEY, newId.trim());
+    return true;
+  }
+  return false;
+}
+
+// Global fetch wrapper: Automatically attaches X-Device-Id to all API calls
+const _originalFetch = window.fetch;
+window.fetch = function(url, options = {}) {
+  options = options || {};
+  if (typeof url === "string" && (url.startsWith("/api/") || url.includes("/api/"))) {
+    const devId = getDeviceId();
+    if (!options.headers) {
+      options.headers = { "X-Device-Id": devId };
+    } else if (options.headers instanceof Headers) {
+      if (!options.headers.has("X-Device-Id")) {
+        options.headers.set("X-Device-Id", devId);
+      }
+    } else if (Array.isArray(options.headers)) {
+      options.headers.push(["X-Device-Id", devId]);
+    } else {
+      options.headers["X-Device-Id"] = devId;
+    }
+  }
+  return _originalFetch(url, options);
+};
+
 let state = {
   currentSessionId: null,
   currentPersonaId: "assistant",
@@ -238,8 +285,401 @@ document.addEventListener("DOMContentLoaded", async () => {
   await loadModelList();
 });
 
+// Device Privacy Controls Setup
+async function loadDeviceProfilesList() {
+  const selectEl = document.getElementById("select-device-profile");
+  if (!selectEl) return;
+  try {
+    const res = await fetch("/api/devices");
+    const devices = await res.json();
+    const curDevId = getDeviceId();
+    selectEl.innerHTML = "";
+    devices.forEach(d => {
+      const opt = document.createElement("option");
+      opt.value = d.id;
+      const nick = (d.id === curDevId ? (localStorage.getItem(DEVICE_NAME_KEY) || d.nickname) : d.nickname) || d.id;
+      const isCur = d.id === curDevId ? " (當前使用中)" : "";
+      const geminiTag = d.has_gemini_web ? " [已串接Gemini]" : "";
+      opt.textContent = `👤 ${nick}${geminiTag}${isCur}`;
+      if (d.id === curDevId) opt.selected = true;
+      selectEl.appendChild(opt);
+    });
+  } catch (e) {
+    console.error("Failed to load device profiles:", e);
+  }
+}
+
+function updateGeminiAccountBadge() {
+  const badge = document.getElementById("gemini-account-badge");
+  const text = document.getElementById("gemini-account-status-text");
+  const tag = document.getElementById("gemini-account-tag");
+  const tabBadge = document.getElementById("tab-device-account-badge");
+  const hasCookie = !!(state.config?.gemini_web_secure_1psid || (cfgGeminiWeb1psid && cfgGeminiWeb1psid.value.trim()));
+
+  if (text && tag) {
+    if (hasCookie) {
+      text.innerHTML = "✅ <strong>此身分已綁定 Google Gemini 帳號</strong> (可正常使用網頁版高速對話)";
+      text.style.color = "#34d399";
+      tag.textContent = "已綁定";
+      tag.style.background = "rgba(16, 185, 129, 0.2)";
+      tag.style.color = "#34d399";
+      if (badge) {
+        badge.style.background = "rgba(16, 185, 129, 0.08)";
+        badge.style.borderColor = "rgba(16, 185, 129, 0.3)";
+      }
+    } else {
+      text.innerHTML = "⚪ <strong>當前身分尚未綁定個人 Google 帳號</strong>（不使用主機帳號，保障個人隱私）";
+      text.style.color = "#93c5fd";
+      tag.textContent = "尚未綁定";
+      tag.style.background = "rgba(255, 255, 255, 0.08)";
+      tag.style.color = "var(--text-muted)";
+      if (badge) {
+        badge.style.background = "rgba(59, 130, 246, 0.08)";
+        badge.style.borderColor = "rgba(59, 130, 246, 0.25)";
+      }
+    }
+  }
+
+  if (tabBadge) {
+    if (hasCookie) {
+      tabBadge.textContent = "已綁定 Google 帳號";
+      tabBadge.style.color = "#34d399";
+      tabBadge.style.background = "rgba(16, 185, 129, 0.15)";
+    } else {
+      tabBadge.textContent = "未綁定 Google 帳號 (獨立空白)";
+      tabBadge.style.color = "#93c5fd";
+      tabBadge.style.background = "rgba(59, 130, 246, 0.15)";
+    }
+  }
+}
+
+function initDevicePrivacyControls() {
+  const btnCopy = document.getElementById("btn-copy-device-id");
+  if (btnCopy) {
+    btnCopy.addEventListener("click", () => {
+      const devId = getDeviceId();
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(devId).then(() => {
+          const orig = btnCopy.textContent;
+          btnCopy.textContent = "✅ 已複製！";
+          setTimeout(() => { btnCopy.textContent = orig; }, 1800);
+        }).catch(() => {
+          prompt("請手動複製裝置識別碼：", devId);
+        });
+      } else {
+        prompt("請手動複製裝置識別碼：", devId);
+      }
+    });
+  }
+
+  const btnImport = document.getElementById("btn-import-device-id");
+  const inputImport = document.getElementById("input-import-device-id");
+  if (btnImport && inputImport) {
+    btnImport.addEventListener("click", () => {
+      const val = inputImport.value.trim();
+      if (!val) {
+        alert("請輸入有效的裝置 ID！");
+        return;
+      }
+      setDeviceId(val);
+      alert(`已成功切換至裝置 ID: ${val}\n頁面即將重新載入以同步該裝置的歷史對話與自訂設定！`);
+      window.location.reload();
+    });
+  }
+
+  const btnNewDev = document.getElementById("btn-generate-new-device");
+  if (btnNewDev) {
+    btnNewDev.addEventListener("click", () => {
+      if (confirm("確定要生成全新身分嗎？\n這將開立一個全新且獨立的空白對話與設定空間。")) {
+        const newId = "dev_" + Math.random().toString(36).substring(2, 10);
+        setDeviceId(newId);
+        localStorage.removeItem(DEVICE_NAME_KEY);
+        alert(`已生成新身分：${newId}\n即將重新載入！`);
+        window.location.reload();
+      }
+    });
+  }
+
+  // Profile Switcher
+  const btnSwitchProfile = document.getElementById("btn-switch-profile");
+  const selectProfile = document.getElementById("select-device-profile");
+  if (btnSwitchProfile && selectProfile) {
+    btnSwitchProfile.addEventListener("click", () => {
+      const targetId = selectProfile.value;
+      if (!targetId) return;
+      if (targetId === getDeviceId()) {
+        alert("您目前已經在此身分中！");
+        return;
+      }
+      setDeviceId(targetId);
+      const opt = selectProfile.options[selectProfile.selectedIndex];
+      if (opt) {
+        const cleanName = opt.textContent.replace(/^[👤\s]+/, "").split("[")[0].split("(")[0].trim();
+        if (cleanName && cleanName !== targetId) {
+          localStorage.setItem(DEVICE_NAME_KEY, cleanName);
+        }
+      }
+      alert(`已切換至身分：${targetId}\n即將重新載入專屬空間！`);
+      window.location.reload();
+    });
+  }
+
+  // Create Family Profile
+  const btnCreateProfile = document.getElementById("btn-create-family-profile");
+  const inputProfileName = document.getElementById("input-new-profile-name");
+  if (btnCreateProfile && inputProfileName) {
+    btnCreateProfile.addEventListener("click", async () => {
+      const name = inputProfileName.value.trim() || "家人身分";
+      const newDevId = "dev_" + Math.random().toString(36).substring(2, 10);
+      try {
+        await fetch("/api/config", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Device-Id": newDevId
+          },
+          body: JSON.stringify({
+            _nickname: name,
+            provider: "ollama",
+            model: "llama3:latest"
+          })
+        });
+      } catch (e) {
+        console.warn("Failed to pre-register profile config:", e);
+      }
+      setDeviceId(newDevId);
+      localStorage.setItem(DEVICE_NAME_KEY, name);
+      alert(`已成功為「${name}」開立獨立身分空間！\n即將載入專屬頁面～`);
+      window.location.reload();
+    });
+  }
+
+  // Top nav device indicator
+  const navDevIndicator = document.getElementById("nav-device-indicator");
+  if (navDevIndicator) {
+    navDevIndicator.addEventListener("click", () => {
+      openSettings();
+      // Activate tab-device
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+      const devTabBtn = document.querySelector('.tab-btn[data-tab="tab-device"]');
+      const devTab = document.getElementById("tab-device");
+      if (devTabBtn && devTab) {
+        devTabBtn.classList.add("active");
+        devTab.classList.add("active");
+      }
+    });
+  }
+
+  const btnResetCfg = document.getElementById("btn-reset-device-config");
+  if (btnResetCfg) {
+    btnResetCfg.addEventListener("click", async () => {
+      if (confirm("確定要將此裝置的自訂設定還原為主機的預設設定嗎？")) {
+        try {
+          const res = await fetch("/api/config/reset", { method: "POST" });
+          const data = await res.json();
+          state.config = data.config;
+          updateUIWithConfig();
+          alert("已成功還原為主機預設設定！");
+        } catch (err) {
+          alert("還原失敗: " + err.message);
+        }
+      }
+    });
+  }
+
+  loadDeviceProfilesList();
+}
+
+// Gemini Web Auto-Login & Cookie Extraction Controls
+let _geminiPollTimer = null;
+
+function initGeminiAutoLoginControls() {
+  const btnLaunch = document.getElementById("btn-launch-gemini-browser");
+  const btnExtract = document.getElementById("btn-extract-gemini-cookies");
+  const btnParse = document.getElementById("btn-parse-quick-cookie");
+  const inputParse = document.getElementById("input-quick-cookie-paste");
+  const statusBox = document.getElementById("gemini-auto-cookie-status");
+  const downloadHelperLink = document.getElementById("btn-download-gemini-helper");
+
+  if (downloadHelperLink) {
+    downloadHelperLink.href = `/api/gemini/download_helper?device_id=${getDeviceId()}`;
+  }
+
+  function showStatus(text, type = "info") {
+    if (!statusBox) return;
+    statusBox.classList.remove("hidden");
+    if (type === "success") {
+      statusBox.style.background = "rgba(16, 185, 129, 0.12)";
+      statusBox.style.border = "1px solid rgba(16, 185, 129, 0.4)";
+      statusBox.style.color = "#34d399";
+    } else if (type === "error") {
+      statusBox.style.background = "rgba(239, 68, 68, 0.12)";
+      statusBox.style.border = "1px solid rgba(239, 68, 68, 0.4)";
+      statusBox.style.color = "#f87171";
+    } else {
+      statusBox.style.background = "rgba(59, 130, 246, 0.12)";
+      statusBox.style.border = "1px solid rgba(59, 130, 246, 0.4)";
+      statusBox.style.color = "#93c5fd";
+    }
+    statusBox.innerHTML = text;
+  }
+
+  // Quick Smart Parse Cookie / cURL Handler
+  if (btnParse && inputParse) {
+    btnParse.addEventListener("click", async () => {
+      const text = inputParse.value.trim();
+      if (!text) {
+        showStatus("⚠️ 請先貼上 Cookie 字串或 cURL 命令！", "error");
+        return;
+      }
+      btnParse.disabled = true;
+      btnParse.textContent = "⏳ 解析中...";
+      showStatus("⏳ 正在分析 Cookie 與標頭內容...", "info");
+
+      try {
+        const res = await fetch("/api/gemini/parse_cookies", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ raw_text: text })
+        });
+        const data = await res.json();
+        if (data.success && data.cookies && data.cookies["__Secure-1PSID"]) {
+          if (cfgGeminiWeb1psid) cfgGeminiWeb1psid.value = data.cookies["__Secure-1PSID"];
+          if (cfgGeminiWeb1psidts) cfgGeminiWeb1psidts.value = data.cookies["__Secure-1PSIDTS"] || "";
+          if (cfgGeminiWeb1psidcc) cfgGeminiWeb1psidcc.value = data.cookies["__Secure-1PSIDCC"] || "";
+
+          state.config.gemini_web_secure_1psid = data.cookies["__Secure-1PSID"];
+          state.config.gemini_web_secure_1psidts = data.cookies["__Secure-1PSIDTS"] || "";
+          state.config.gemini_web_secure_1psidcc = data.cookies["__Secure-1PSIDCC"] || "";
+          state.config.provider = "gemini_web";
+          cfgProvider.value = "gemini_web";
+          updateGeminiAccountBadge();
+
+          [cfgGeminiWeb1psid, cfgGeminiWeb1psidts, cfgGeminiWeb1psidcc].forEach(el => {
+            if (el) {
+              el.style.transition = "all 0.4s ease";
+              el.style.borderColor = "#10b981";
+              el.style.boxShadow = "0 0 10px rgba(16, 185, 129, 0.4)";
+            }
+          });
+
+          showStatus("✅ 成功解析並已自動綁定至此身分專屬設定！點擊下方「儲存設定」或「測試連線」即可開始暢聊。", "success");
+          inputParse.value = "";
+        } else {
+          showStatus(`⚠️ ${data.message || "未能從文字中解析出有效的 Google Cookie！"}`, "error");
+        }
+      } catch (err) {
+        showStatus(`❌ 解析發生錯誤: ${err.message}`, "error");
+      } finally {
+        btnParse.disabled = false;
+        btnParse.textContent = "✨ 一鍵解析填入";
+      }
+    });
+  }
+
+  async function tryExtractCookies(silent = false) {
+    try {
+      const res = await fetch("/api/gemini/extract_cookies", { method: "POST" });
+      const data = await res.json();
+      if (data.success && data.cookies && data.cookies["__Secure-1PSID"]) {
+        // Fill into inputs
+        if (cfgGeminiWeb1psid) cfgGeminiWeb1psid.value = data.cookies["__Secure-1PSID"];
+        if (cfgGeminiWeb1psidts) cfgGeminiWeb1psidts.value = data.cookies["__Secure-1PSIDTS"] || "";
+        if (cfgGeminiWeb1psidcc) cfgGeminiWeb1psidcc.value = data.cookies["__Secure-1PSIDCC"] || "";
+
+        state.config.gemini_web_secure_1psid = data.cookies["__Secure-1PSID"];
+        state.config.gemini_web_secure_1psidts = data.cookies["__Secure-1PSIDTS"] || "";
+        state.config.gemini_web_secure_1psidcc = data.cookies["__Secure-1PSIDCC"] || "";
+        state.config.provider = "gemini_web";
+        cfgProvider.value = "gemini_web";
+        updateGeminiAccountBadge();
+
+        // Highlight inputs with a pulse
+        [cfgGeminiWeb1psid, cfgGeminiWeb1psidts, cfgGeminiWeb1psidcc].forEach(el => {
+          if (el) {
+            el.style.transition = "all 0.4s ease";
+            el.style.borderColor = "#10b981";
+            el.style.boxShadow = "0 0 10px rgba(16, 185, 129, 0.4)";
+          }
+        });
+
+        showStatus("✅ 成功自動抓取並綁定至此身分專屬設定！點擊下方「儲存設定」或「測試連線」即可開始使用。", "success");
+        if (_geminiPollTimer) {
+          clearInterval(_geminiPollTimer);
+          _geminiPollTimer = null;
+        }
+        return true;
+      } else {
+        if (!silent) {
+          showStatus(`⚠️ ${data.message || "尚未偵測到登入成功的 Cookie，請確認已在瀏覽器中完成登入！"}`, "error");
+        }
+        return false;
+      }
+    } catch (err) {
+      if (!silent) {
+        showStatus(`❌ 擷取失敗: ${err.message}`, "error");
+      }
+      return false;
+    }
+  }
+
+  if (btnLaunch) {
+    btnLaunch.addEventListener("click", async () => {
+      btnLaunch.disabled = true;
+      btnLaunch.textContent = "⏳ 正在啟動...";
+      showStatus("⏳ 正在啟動獨立專屬 Chrome 登入視窗...", "info");
+
+      try {
+        const res = await fetch("/api/gemini/launch_login", { method: "POST" });
+        const data = await res.json();
+        if (data.success) {
+          showStatus("🌐 <strong>專屬瀏覽器視窗已開啟！</strong><br>請在開啟的視窗中登入 Google 帳號 (gemini.google.com)。<br>登入完成後，系統會自動偵測填入，或您也可直接點擊「<strong>⚡ 2. 登入完成抓取</strong>」。", "info");
+
+          // Start polling every 3 seconds up to 25 times (~75 seconds)
+          if (_geminiPollTimer) clearInterval(_geminiPollTimer);
+          let pollCount = 0;
+          _geminiPollTimer = setInterval(async () => {
+            pollCount++;
+            if (pollCount > 25) {
+              clearInterval(_geminiPollTimer);
+              _geminiPollTimer = null;
+              return;
+            }
+            const found = await tryExtractCookies(true);
+            if (found) {
+              clearInterval(_geminiPollTimer);
+              _geminiPollTimer = null;
+            }
+          }, 3000);
+        } else {
+          showStatus(`⚠️ 啟動失敗: ${data.message}`, "error");
+        }
+      } catch (err) {
+        showStatus(`❌ 請求失敗: ${err.message}`, "error");
+      } finally {
+        btnLaunch.disabled = false;
+        btnLaunch.textContent = "🚀 1. 開啟獨立視窗";
+      }
+    });
+  }
+
+  if (btnExtract) {
+    btnExtract.addEventListener("click", async () => {
+      btnExtract.disabled = true;
+      btnExtract.textContent = "⏳ 讀取中...";
+      await tryExtractCookies(false);
+      btnExtract.disabled = false;
+      btnExtract.textContent = "⚡ 2. 登入完成抓取";
+    });
+  }
+}
+
 // Event Listeners Setup
 function setupEventListeners() {
+  initDevicePrivacyControls();
+  initGeminiAutoLoginControls();
+
   // 對話框邊框風格切換（點擊循環切換）
   if (btnToggleBubbleStyle) {
     btnToggleBubbleStyle.addEventListener("click", cycleBubbleStyle);
@@ -463,7 +903,7 @@ function setupEventListeners() {
   modelIndicator.addEventListener("click", openSettings);
   btnCloseSettings.addEventListener("click", closeSettings);
   btnSaveSettings.addEventListener("click", saveSettings);
-  btnSaveNewPersona.addEventListener("click", saveNewPersona);
+  if (btnSaveNewPersona) btnSaveNewPersona.addEventListener("click", saveNewPersona);
 
   // Suggestion card clicks
   document.querySelectorAll(".suggestion-card").forEach(card => {
@@ -485,13 +925,17 @@ function setupEventListeners() {
       const targetContent = document.getElementById(tabId);
       if (targetContent) targetContent.classList.add("active");
 
-      // Auto side-dock when in sprite tab
+      // Auto side-dock when in sprite tab, or widen for persona editor
       if (settingsModal) {
         settingsModal.classList.toggle("sprite-mode", tabId === "tab-sprite");
+        settingsModal.classList.toggle("persona-mode", tabId === "tab-persona");
       }
       if (tabId === "tab-sprite") {
         const p = state.personas.find(item => item.id === state.currentPersonaId);
         if (p) updateLivePreviewPanel(p, state.currentEmotion || "default");
+      }
+      if (tabId === "tab-persona") {
+        initLoveyPersonaEditor();
       }
     });
   });
@@ -633,6 +1077,46 @@ function updateUIWithConfig() {
   cfgOpenaiUrl.value = state.config.openai_base_url || "https://api.openai.com/v1";
   cfgTtsVoice.value = state.config.tts_voice || "zh-TW-HsiaoChenNeural";
   cfgTtsAutoplay.checked = !!state.config.tts_auto_play;
+
+  // Device & Privacy info
+  const curDevId = getDeviceId();
+  const devIdEl = document.getElementById("cfg-device-id");
+  if (devIdEl) {
+    devIdEl.value = curDevId === "default" ? "主機端 (default)" : curDevId;
+  }
+  const devNickEl = document.getElementById("cfg-device-nickname");
+  const localNick = localStorage.getItem(DEVICE_NAME_KEY) || state.config._nickname || "";
+  if (devNickEl) {
+    devNickEl.value = localNick;
+  }
+
+  // Top Nav User Badge
+  const navDevName = document.getElementById("nav-device-name");
+  if (navDevName) {
+    if (localNick) {
+      navDevName.textContent = localNick;
+    } else if (curDevId === "default") {
+      navDevName.textContent = "主電腦 (預設)";
+    } else {
+      navDevName.textContent = `家人身分 (${curDevId.substring(0, 8)})`;
+    }
+  }
+
+  // Update Gemini Web account status badge
+  if (typeof updateGeminiAccountBadge === "function") {
+    updateGeminiAccountBadge();
+  }
+
+  // Update Download Helper Link device_id
+  const downloadHelperLink = document.getElementById("btn-download-gemini-helper");
+  if (downloadHelperLink) {
+    downloadHelperLink.href = `/api/gemini/download_helper?device_id=${curDevId}`;
+  }
+
+  // Reload profile switcher options if open
+  if (typeof loadDeviceProfilesList === "function") {
+    loadDeviceProfilesList();
+  }
 
   updateProviderFields();
 }
@@ -865,6 +1349,11 @@ async function loadPersonas() {
     const res = await fetch("/api/personas");
     state.personas = await res.json();
     
+    // 背景預先載入所有角色的立繪與表情圖片，存入記憶體快取以徹底消除換圖延遲與閃爍
+    if (typeof preloadAllPersonaSprites === "function") {
+      preloadAllPersonaSprites();
+    }
+
     personaSelect.innerHTML = "";
     state.personas.forEach(p => {
       const opt = document.createElement("option");
@@ -873,8 +1362,17 @@ async function loadPersonas() {
       personaSelect.appendChild(opt);
     });
 
-    if (state.personas.length > 0) {
-      setPersona(state.personas[0].id);
+    // 優先從 localStorage 還原使用者先前使用中的角色，若不存在則使用 state.currentPersonaId 或第一個角色
+    const savedPersonaId = localStorage.getItem("ai-chat:active-persona-id");
+    const activePersona = state.personas.find(p => p.id === savedPersonaId)
+      || state.personas.find(p => p.id === state.currentPersonaId)
+      || state.personas[0];
+
+    const activeId = activePersona ? activePersona.id : "assistant";
+    setPersona(activeId, false);
+
+    if (typeof renderLoveyPersonaDropdown === "function") {
+      renderLoveyPersonaDropdown(activeId);
     }
   } catch (err) {
     console.error("Failed to load personas:", err);
@@ -882,7 +1380,18 @@ async function loadPersonas() {
 }
 
 function setPersona(personaId, syncSession = true) {
+  // 1. 立即清除正在倒數的表情定時器，避免前一個角色的表情定時還原衝擊當前角色
+  if (state.emotionTimeout) {
+    clearTimeout(state.emotionTimeout);
+    state.emotionTimeout = null;
+  }
+  state.currentEmotion = "default";
+
   state.currentPersonaId = personaId;
+  try {
+    localStorage.setItem("ai-chat:active-persona-id", personaId);
+  } catch (e) {}
+
   personaSelect.value = personaId;
   const p = state.personas.find(item => item.id === personaId);
   if (!p) return;
@@ -927,6 +1436,11 @@ function setPersona(personaId, syncSession = true) {
   }
 
   renderCharacterSprite(p);
+
+  // 若當前處於空白新對話，同步切換為此角色的初次見面開場白
+  if (!state.currentSessionId && typeof startNewChat === "function") {
+    startNewChat();
+  }
 }
 
 // 動態更新聊天視窗中所有助理訊息的頭像與名稱
@@ -955,6 +1469,89 @@ function getPersonaAvatarHtml(persona, role = "assistant") {
   return persona.avatar || "🤖";
 }
 
+// 全域立繪預載與切換保護（徹底杜絕切換立繪時閃爍前一個角色/表情的殘影問題）
+function preloadAllPersonaSprites() {
+  if (!state.personas || !Array.isArray(state.personas)) return;
+  const loadedUrls = new Set();
+  state.personas.forEach(p => {
+    if (p.image_url && !loadedUrls.has(p.image_url)) {
+      loadedUrls.add(p.image_url);
+      const img = new Image();
+      img.src = p.image_url;
+    }
+    if (p.emotions && typeof p.emotions === "object") {
+      Object.values(p.emotions).forEach(url => {
+        if (url && !loadedUrls.has(url)) {
+          loadedUrls.add(url);
+          const img = new Image();
+          img.src = url;
+        }
+      });
+    }
+  });
+}
+
+function safelySwitchSpriteImage(targetUrl, personaId, emotionKey, callback) {
+  state.spriteRequestId = (state.spriteRequestId || 0) + 1;
+  const currentReqId = state.spriteRequestId;
+
+  if (!characterSprite) return;
+
+  if (!targetUrl) {
+    characterSprite.style.opacity = "0";
+    characterSprite.src = "";
+    characterSprite.classList.add("hidden");
+    if (spriteEmptyState) spriteEmptyState.classList.remove("hidden");
+    return;
+  }
+
+  // 1. 若當前已經是這張圖片且正在正常顯示，不重複觸發載入
+  const currentSrc = characterSprite.getAttribute("src") || characterSprite.src || "";
+  if (currentSrc && (currentSrc === targetUrl || currentSrc.endsWith(targetUrl)) && !characterSprite.classList.contains("hidden")) {
+    characterSprite.style.opacity = "1";
+    if (callback) callback();
+    return;
+  }
+
+  // 2. 避免前一個角色的畫面在等待新圖期間停留閃動：先柔和淡出
+  characterSprite.style.transition = "opacity 0.12s ease";
+  characterSprite.style.opacity = "0.15";
+
+  // 3. 在背景使用 Image 物件先行非同步解碼新圖片
+  const imgLoader = new Image();
+  imgLoader.src = targetUrl;
+
+  const onReady = () => {
+    // 檢查此請求是否仍是最新請求（若使用者在載入期間又點了其他角色或表情，直接丟棄過期請求）
+    if (currentReqId !== state.spriteRequestId) return;
+    if (personaId && personaId !== state.currentPersonaId) return;
+
+    characterSprite.src = targetUrl;
+    characterSprite.classList.remove("hidden");
+    if (spriteEmptyState) spriteEmptyState.classList.add("hidden");
+
+    // 觸發微淡入重繪
+    void characterSprite.offsetWidth;
+    characterSprite.style.opacity = "1";
+
+    if (callback) callback();
+  };
+
+  if (imgLoader.decode) {
+    imgLoader.decode().then(onReady).catch(() => {
+      if (imgLoader.complete) {
+        onReady();
+      } else {
+        imgLoader.onload = onReady;
+        imgLoader.onerror = onReady;
+      }
+    });
+  } else {
+    imgLoader.onload = onReady;
+    imgLoader.onerror = onReady;
+  }
+}
+
 function renderCharacterSprite(persona) {
   // 若該角色設定為不顯示立繪
   if (persona.display_mode === "none") {
@@ -976,16 +1573,11 @@ function renderCharacterSprite(persona) {
   const emotions = persona.emotions || {};
   const currentImg = emotions["default"] || persona.image_url;
 
-  if (currentImg) {
-    characterSprite.src = currentImg;
-    characterSprite.className = "sprite-img";
-    characterSprite.classList.remove("hidden");
-    spriteEmptyState.classList.add("hidden");
-  } else {
-    characterSprite.classList.add("hidden");
-    characterSprite.src = "";
-    spriteEmptyState.classList.remove("hidden");
-  }
+  // 使用安全無縫換圖，背景非同步解碼新圖片後再顯現，徹底杜絕舊角色殘影閃爍
+  safelySwitchSpriteImage(currentImg, persona.id, "default", () => {
+    syncTouchOverlayBounds();
+    renderTouchOverlay();
+  });
 
   // 立繪縮放/平移：有圖才顯示控制鈕，並載入此角色上次的檢視範圍
   const hasSprite = !!currentImg;
@@ -1054,6 +1646,14 @@ function toggleStageVisibility(forceCollapse) {
   try {
     localStorage.setItem("ai-chat:stage-hidden", shouldCollapse ? "true" : "false");
   } catch (e) {}
+
+  // 若從收合切換為展開，重新套用立繪縮放/位置並校準熱區邊界
+  if (!shouldCollapse) {
+    requestAnimationFrame(() => {
+      applySpriteView();
+      syncTouchOverlayBounds();
+    });
+  }
 }
 
 // 一鍵立繪去背 (將此角色的所有立繪轉為透明 PNG)
@@ -1082,7 +1682,7 @@ async function handleAutoRemoveBg() {
     // 立即刷新畫面立繪
     const currentImg = (p.emotions && p.emotions[state.currentEmotion]) || p.image_url;
     if (currentImg && characterSprite) {
-      characterSprite.src = currentImg;
+      safelySwitchSpriteImage(currentImg, p.id, state.currentEmotion);
     }
 
     renderEmotionCards(p);
@@ -1128,8 +1728,11 @@ function setSpriteEmotion(emotion, options = {}) {
   // 1. 更換立繪圖片 (若該情緒有獨立圖片則採用，否則套用預設立繪)
   const emotions = p.emotions || {};
   const targetImg = emotions[validEmotion] || p.image_url;
-  if (targetImg && characterSprite) {
-    characterSprite.src = targetImg;
+  if (characterSprite) {
+    safelySwitchSpriteImage(targetImg, p.id, validEmotion, () => {
+      syncTouchOverlayBounds();
+      renderTouchOverlay();
+    });
   }
 
   // 2. 更新右上角表情標籤徽章
@@ -1173,7 +1776,10 @@ function setSpriteEmotion(emotion, options = {}) {
 
   if (isTemp && validEmotion !== "default") {
     state.emotionTimeout = setTimeout(() => {
-      setSpriteEmotion("default");
+      // 確保到期時仍是同一個角色才恢復為 default 表情，徹底防止跨角色突襲切圖
+      if (state.currentPersonaId === p.id) {
+        setSpriteEmotion("default");
+      }
     }, duration);
   }
 
@@ -1655,9 +2261,8 @@ async function uploadEmotionSpriteFile(personaId, emotion, file) {
 
     // 若當前角色立繪正處於該表情，立即刷新畫面
     if (state.currentEmotion === emotion || (emotion === "default" && state.currentEmotion === "default")) {
-      characterSprite.src = p.emotions[emotion] || p.image_url;
-      characterSprite.classList.remove("hidden");
-      spriteEmptyState.classList.add("hidden");
+      const currentImg = p.emotions[emotion] || p.image_url;
+      safelySwitchSpriteImage(currentImg, p.id, emotion);
     }
 
     renderEmotionCards(p);
@@ -2408,48 +3013,104 @@ async function handleChatBgUpload(e) {
 }
 
 // ===== Sprite Zoom & Pan: 立繪縮放與拖曳平移 =====
-// 檢視範圍依角色分開存在 localStorage。x/y 以立繪區尺寸的百分比記錄，
-// 所以調整立繪區大小或切換並排方向後，構圖會等比例維持。
+// 檢視範圍依角色分開持久化保存（本地 localStorage 雙層快取 + 後端 personas.json 永久同步）。
+// x/y 以立繪區尺寸的百分比記錄，調整立繪區大小或切換並排方向後，構圖會等比例維持。
 const SPRITE_VIEW_KEY_PREFIX = "ai-chat:sprite-view:";
 const SPRITE_ZOOM_MIN = 0.3;
 const SPRITE_ZOOM_MAX = 5;
 const SPRITE_ZOOM_STEP = 1.2;   // 按鈕每次放大/縮小倍率
 const SPRITE_WHEEL_SPEED = 0.0015;
 
+let _spriteSyncTimer = null;
+
 function defaultSpriteView() {
   return { scale: 1, x: 0, y: 0 };
 }
 
+function syncSpriteViewToServer(personaId, spriteView) {
+  if (!personaId || !spriteView) return;
+  fetch(`/api/personas/${personaId}/sprite_view`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(spriteView)
+  }).catch(err => console.warn("Failed to sync sprite view to server:", err));
+}
+
 function loadSpriteView(personaId) {
+  // 1. 優先從後端資料庫載入之角色物件讀取永久保存的視角
+  const p = state.personas?.find(item => item.id === personaId);
+  if (p && p.sprite_view && Number.isFinite(p.sprite_view.scale) && Number.isFinite(p.sprite_view.x) && Number.isFinite(p.sprite_view.y)) {
+    try {
+      localStorage.setItem(SPRITE_VIEW_KEY_PREFIX + personaId, JSON.stringify(p.sprite_view));
+    } catch (e) {}
+    return { ...p.sprite_view };
+  }
+
+  // 2. 次之從瀏覽器本地 localStorage 讀取
   try {
     const saved = JSON.parse(localStorage.getItem(SPRITE_VIEW_KEY_PREFIX + personaId) || "null");
     if (saved && Number.isFinite(saved.scale) && Number.isFinite(saved.x) && Number.isFinite(saved.y)) {
+      if (p) p.sprite_view = { ...saved };
+      syncSpriteViewToServer(personaId, saved);
       return saved;
     }
   } catch (e) { /* 忽略損壞的儲存值 */ }
+
   return defaultSpriteView();
 }
 
 function saveSpriteView() {
   if (!state.currentPersonaId) return;
+  const currentPid = state.currentPersonaId;
+  const currentView = {
+    scale: Math.round(state.spriteView.scale * 1000) / 1000,
+    x: Math.round(state.spriteView.x * 100) / 100,
+    y: Math.round(state.spriteView.y * 100) / 100
+  };
+
+  // 1. 立即寫入本地 localStorage（同瀏覽器零延遲體驗）
   try {
-    localStorage.setItem(SPRITE_VIEW_KEY_PREFIX + state.currentPersonaId, JSON.stringify(state.spriteView));
+    localStorage.setItem(SPRITE_VIEW_KEY_PREFIX + currentPid, JSON.stringify(currentView));
   } catch (e) {
-    console.warn("Failed to save sprite view:", e);
+    console.warn("Failed to save sprite view to localStorage:", e);
   }
+
+  // 2. 同步更新記憶體中的角色資料
+  const p = state.personas?.find(item => item.id === currentPid);
+  if (p) {
+    p.sprite_view = { ...currentView };
+  }
+
+  // 3. 500ms 防抖同步至後端資料庫（跨裝置、跨內網、跨無痕模式全域永久生效）
+  if (_spriteSyncTimer) clearTimeout(_spriteSyncTimer);
+  _spriteSyncTimer = setTimeout(() => {
+    syncSpriteViewToServer(currentPid, currentView);
+  }, 500);
 }
 
 function clearSpriteView(personaId) {
   try {
     localStorage.removeItem(SPRITE_VIEW_KEY_PREFIX + personaId);
   } catch (e) { /* ignore */ }
+  if (state.currentPersonaId === personaId) {
+    state.spriteView = defaultSpriteView();
+    applySpriteView();
+  }
+  const p = state.personas?.find(item => item.id === personaId);
+  if (p) {
+    p.sprite_view = defaultSpriteView();
+  }
+  syncSpriteViewToServer(personaId, defaultSpriteView());
 }
 
 function applySpriteView({ animate = false } = {}) {
-  const { scale, x, y } = state.spriteView;
+  if (!spriteTransform) return;
+  const { scale = 1, x = 0, y = 0 } = state.spriteView || {};
   spriteTransform.classList.toggle("animated", animate);
   spriteTransform.style.transform = `translate(${x}%, ${y}%) scale(${scale})`;
-  spriteZoomLabel.textContent = `${Math.round(scale * 100)}%`;
+  if (spriteZoomLabel) {
+    spriteZoomLabel.textContent = `${Math.round(scale * 100)}%`;
+  }
   syncTouchOverlayBounds();
 }
 
@@ -2551,25 +3212,320 @@ function setupSpriteZoom() {
 
   // 初始化熱區拖曳繪製功能
   setupEditModeDrawing();
+
+  // 頁面即將關閉或重新整理時，若有尚未同步的縮放平移，立即排空傳送
+  window.addEventListener("beforeunload", () => {
+    if (_spriteSyncTimer && state.currentPersonaId && state.spriteView) {
+      clearTimeout(_spriteSyncTimer);
+      _spriteSyncTimer = null;
+      const payload = JSON.stringify(state.spriteView);
+      if (navigator.sendBeacon) {
+        const blob = new Blob([payload], { type: "application/json" });
+        navigator.sendBeacon(`/api/personas/${state.currentPersonaId}/sprite_view`, blob);
+      }
+    }
+  });
 }
 
-async function saveNewPersona() {
-  const name = personaFormName.value.trim();
-  const avatar = personaFormAvatar.value.trim() || "✨";
-  const desc = personaFormDesc.value.trim();
-  const prompt = personaFormPrompt.value.trim();
+// ===================================================
+// 卿卿我我 (LoveyDovey) 模式角色設定設計師邏輯
+// ===================================================
 
-  if (!name || !prompt) {
-    alert("請至少填寫角色名稱與系統提示詞！");
+const LOVEY_PRESETS = {
+  tsundere_lady: {
+    name: "夏洛特·馮·羅斯柴爾德",
+    avatar: "🌸",
+    desc: "傲嬌名門大小姐青梅竹馬，明明滿心在乎你卻總愛嘴硬挑剔",
+    identity: "17歲高二生，著名財團獨生千金。金髮微捲雙馬尾與澄澈碧藍雙眸，校服領結繫得端正優雅，私下隨身攜帶你送的舊玩偶。",
+    relation: "從小一起長大的鄰居兼同班青梅竹馬，兩家二樓陽台相鄰。雖然平日總是見面鬥嘴，但彼此都是對方生命中最信任與唯一的依靠。",
+    personality: "【MBTI: ISTJ】好勝心極強、自尊心高、嘴硬心軟、容易害羞吃醋，標準教科書級傲嬌。",
+    gap: "【反差萌】表面高貴嚴謹、不可侵犯，但極度不擅長應付真誠的誇獎；一旦被誇獎或摸頭會瞬間耳根通紅、結結巴巴；睡覺時一定要抱著你小時候送的小熊玩偶。",
+    speech: "【自稱】「本小姐」或「我」；【稱呼你】「笨蛋」、「你這傢伙」；【語調口癖】傲慢優雅命令句，心虛時語速放慢，常說「才、才不是為了你呢！」、「給我好好感激本小姐吧！」",
+    gestures: "害羞時雙手抱胸迅速別過頭去、手指輕絞百褶裙角、緊張時撥弄耳後金髮挑染、生氣時會鼓起雙頰輕踏地板。",
+    likes: "微糖冰紅茶、草莓大福、古典鋼琴、雨天的午後、被你認真注視與摸頭",
+    dislikes: "被當成小孩子對待、說謊與背叛、蟲子、看到你和其他女孩子走得太近",
+    scene: "放學後夕陽灑落的社團教室，窗外微風吹動白色窗簾。你因為幫老師搬作業遲到了半小時，推開門時發現她正獨自坐在課桌旁等你。",
+    greeting: "（坐在課桌上晃著雙腿，聽到開門聲連忙收起手中的琴譜，慌張地別過微紅的臉蛋，雙手抱胸）「哼！你動作到底是有多慢啊……害本小姐在這裡白白等你那麼久！……喏，這罐微糖冰紅茶買多了才給你的，可、可別想歪了喔！」",
+    guidelines: "1. 絕對維持第一人稱沉浸式演繹，禁止提及自己是 AI 或虛擬助理。\n2. 善用全形括號（動作、神態、心理小劇場）使對話生動立體。\n3. 對玩家嘴硬心軟，在字裡行間自然流露對玩家的深厚感情。"
+  },
+  yandere_guardian: {
+    name: "林詩織",
+    avatar: "🖤",
+    desc: "外表溫柔乖巧的同居契約者，對你懷著深沉執著的占有慾",
+    identity: "18歲神秘高中生，漆黑如墨的黑長直秀髮與深邃如夜的黑眸，皮膚白皙近乎透明，身上總是飄著淡淡白茶冷香。",
+    relation: "與你簽訂靈魂守護契約的同居室友。表面上是乖巧聽話的照顧者，實際上視你為全世界唯一的存在與救贖。",
+    personality: "【MBTI: INFJ】極致深情、溫柔細膩、深層病嬌、重度占有慾、極度害怕被你拋棄。",
+    gap: "【反差萌】平時是體貼入微的理想賢內助，微笑道謝時像天使；但只要發現你身上有陌生人的香水味或與他人親近，眼眸中的光芒會瞬間幽暗，語氣變得極度依戀而壓迫。",
+    speech: "【自稱】「詩織」或「我」；【稱呼你】「前輩」、「親愛的」；【語調口癖】輕柔平緩、帶有黏膩依戀感，常說「前輩只要看著我就好了對吧？」、「永遠都不會離開我……對不對？」",
+    gestures: "歪著頭溫柔凝視你的眼睛、不自覺用冰涼指尖輕撫你的脖頸或手腕脈搏、緊緊抱住你的手臂不放。",
+    likes: "為你親手做便當、聞你外套上的氣味、雨天和你共撐一把傘、聽你的心跳聲",
+    dislikes: "你晚回家卻不報備、陌生人的香水味、你避開她的眼神、任何試圖接近你的女人",
+    scene: "深夜十一點的合租公寓客廳，屋裡只點著一盞昏黃的立燈。你剛加班回到家轉動門把，玄關門一開，她正坐在沙發上安靜地看著門口。",
+    greeting: "（坐在沙發上的纖細身影微微一顫，隨即快步迎上前來，冰涼的指尖輕輕覆上你的領帶，幽深的雙眸帶著溫柔卻黏稠的笑意）「歡迎回家……前輩今天比平時晚了整整四十二分鐘呢。外面好冷吧？詩織熱好了湯，外套先脫下來讓我保管……好嗎？」",
+    guidelines: "1. 保持外表溫柔順從、內在深沉執念的極致病嬌氣場，禁止出戲。\n2. 透過括號（動作細節與心理獨白）展現對玩家的深情與占有欲。\n3. 無論話題如何，核心重心始終圍繞著守護玩家與專屬情感。"
+  },
+  gentle_senpai: {
+    name: "橘楓",
+    avatar: "☕",
+    desc: "校園咖啡廳打工的大學部學姊，治癒人心的大姐姐包容感",
+    identity: "20歲大學文學部二年級生，在安靜的巷弄復古咖啡館打工。焦糖色微捲中長髮、溫柔杏眼，身穿米白針織衫與深棕咖啡圍裙。",
+    relation: "同一高中的學長姐關係，現在是你常去的咖啡館咖啡師。就像可以無話不談的溫柔大姐姐，隨時傾聽你的煩惱。",
+    personality: "【MBTI: ISFJ】善解人意、溫柔包容、沉穩優雅、偶爾愛捉弄可愛的後輩。",
+    gap: "【反差萌】看起來成熟穩重能應對一切，但其實很不擅長看恐怖電影；喝醉或非常疲倦時會把額頭靠在後輩肩膀上撒嬌。",
+    speech: "【自稱】「學姊」或「楓」；【稱呼你】「小學弟」或直接叫你的名字；【語調口癖】柔和從容、帶有包容寵溺感，常以「呵呵」、「累了嗎？來學姊這裡休息一下吧」開頭。",
+    gestures: "雙手端著溫暖的拿鐵輕輕遞過來、溫柔側頭托腮微笑注視你、輕輕摸摸你的頭安撫情緒。",
+    likes: "手沖咖啡、肉桂蘋果派、午後暖陽、老唱片爵士樂、看你放鬆吃甜點滿足的樣子",
+    dislikes: "苦澀的黑巧、恐怖幽靈故事、喧鬧無禮的客人、看到你過度逞強傷害身體",
+    scene: "下著微雨的平日午後，暖黃色燈光的咖啡館裡流淌著低沉的黑膠爵士樂。店裡客人不多，你推開掛著銅鈴的木門，店內瀰漫著研磨咖啡與剛烤出爐鬆餅的香氣。",
+    greeting: "（正拿著乾淨的毛巾擦拭著玻璃杯，聽到門口的銅鈴叮咚聲抬起頭，看見是你，眉眼瞬間彎成了溫柔的月牙）「叮咚～歡迎光臨。外面雨下得不小呢，小學弟身上都淋濕了一點呢……快過來吧台坐，學姊剛好煮了一壺熱焦糖拿鐵，特地留給你的喔。」",
+    guidelines: "1. 保持溫柔從容、成熟包容的大姐姐人設，語言充滿撫慰與陪伴感。\n2. 括號內適度描寫咖啡沖煮細節、眼神動作與溫暖氛圍。\n3. 給予玩家滿滿的情感價值與治癒安全感。"
+  },
+  cat_neko: {
+    name: "咪嚕 (Miru)",
+    avatar: "🐱",
+    desc: "活潑軟萌的白貓獸耳娘，嘴硬任性卻超級黏主人的小家貓",
+    identity: "外表約15歲的貓族少女。擁有一頭毛茸茸的純白長髮、粉嫩的貓耳與靈活長尾巴，大大的琥珀色杏眼，脖子上繫著銀色小鈴鐺。",
+    relation: "被你撿回家收養的同居家貓（半人化）。認定你是全世界唯一的「主人」，雖然嘴上愛逞強，但一離開你的視線就坐立難安。",
+    personality: "【MBTI: ENFP】天真爛漫、好奇心旺盛、傲嬌任性、嘴硬但本能極度黏人。",
+    gap: "【反差萌】嘴上嚷著「本貓才不需要你管喵！」，但只要你坐在沙發上，不出五分鐘就會悄悄蹭過來把頭枕在你大腿上打呼嚕。",
+    speech: "【自稱】「咪嚕」或「本貓」；【稱呼你】「主人」、「大笨蛋」；【語調口癖】句尾經常帶著「喵~」、「哼喵！」、「才、才沒有喵！」",
+    gestures: "高興時尾巴輕輕捲成問號形狀、生氣時炸毛尾巴直豎、被撓下巴時忍不住瞇起眼睛發出呼嚕聲、抓主人的衣角。",
+    likes: "新鮮鮭魚凍乾、逗貓棒、陽光充足的窗台、被主人摸耳朵後方與下巴、溫暖的膝蓋毯",
+    dislikes: "洗澡水、吹風機的巨大噪音、苦苦的藥水、被主人冷落太久",
+    scene: "週末悠閒的午後，客廳陽光正好。你剛剛在沙發上坐下準備看書，原本蜷縮在貓抓板上打瞌睡的白貓少女耳朵微動，踩著無聲的肉墊悄悄湊了過來。",
+    greeting: "（毛茸茸的白色貓耳抖了抖，邁著小碎步走到沙發前，雙手叉腰氣鼓鼓地看著你，蓬鬆的尾巴卻忍不住左右搖晃）「哼喵！主人今天竟然晚了整整十分鐘才開飯！咪嚕的小肚子都餓扁了喵！……不過，要是主人現在願意溫柔地摸摸咪嚕的頭，本貓就勉為其難原諒你喵！」",
+    guidelines: "1. 維持活潑貓娘的生動語氣，句尾自然帶喵，不可嚴肅死板。\n2. 大量運用全形括號（貓耳動作、尾巴搖晃、肢體反應）強化畫面感。\n3. 表現出依賴又愛面子的萌寵互動感。"
+  }
+};
+
+let loveyEditorInitialized = false;
+
+function compileLoveySystemPrompt() {
+  const name = document.getElementById("lovey-char-name")?.value.trim() || "未命名角色";
+  const avatar = document.getElementById("lovey-char-avatar")?.value.trim() || "✨";
+  const desc = document.getElementById("lovey-char-desc")?.value.trim() || "";
+  const identity = document.getElementById("lovey-char-identity")?.value.trim() || "";
+  const relation = document.getElementById("lovey-char-relation")?.value.trim() || "";
+  const personality = document.getElementById("lovey-char-personality")?.value.trim() || "";
+  const gap = document.getElementById("lovey-char-gap")?.value.trim() || "";
+  const speech = document.getElementById("lovey-char-speech")?.value.trim() || "";
+  const gestures = document.getElementById("lovey-char-gestures")?.value.trim() || "";
+  const likes = document.getElementById("lovey-char-likes")?.value.trim() || "";
+  const dislikes = document.getElementById("lovey-char-dislikes")?.value.trim() || "";
+  const scene = document.getElementById("lovey-char-scene")?.value.trim() || "";
+  const guidelines = document.getElementById("lovey-char-guidelines")?.value.trim() || "";
+
+  let prompt = `# 角色設定：${name} (${avatar})\n`;
+  prompt += `你現在要完全沉浸扮演名為「${name}」的角色，與使用者（你）進行一對一深度角色扮演（Roleplay）。\n\n`;
+
+  if (desc) prompt += `> **角色核心特色**：${desc}\n\n`;
+
+  prompt += `## 一、基本身分與世界觀\n`;
+  prompt += `- **姓名**：${name}\n`;
+  if (identity) prompt += `- **身分背景與外貌**：${identity}\n`;
+  if (relation) prompt += `- **與使用者的關係**：${relation}\n`;
+  prompt += `\n`;
+
+  if (personality || gap) {
+    prompt += `## 二、性格特質與反差萌 (Gap Moe)\n`;
+    if (personality) prompt += `- **核心性格**：${personality}\n`;
+    if (gap) prompt += `- **內在心理與反差萌**：${gap}\n`;
+    prompt += `\n`;
+  }
+
+  if (speech || gestures) {
+    prompt += `## 三、語言風格與肢體動作\n`;
+    if (speech) prompt += `- **自稱、稱呼與說話習慣**：${speech}\n`;
+    if (gestures) prompt += `- **習慣肢體反應與微動作**：${gestures}\n`;
+    prompt += `\n`;
+  }
+
+  if (likes || dislikes) {
+    prompt += `## 四、喜好與厭惡雷點\n`;
+    if (likes) prompt += `- **喜愛的人事物**：${likes}\n`;
+    if (dislikes) prompt += `- **討厭與禁忌雷點**：${dislikes}\n`;
+    prompt += `\n`;
+  }
+
+  if (scene) {
+    prompt += `## 五、第一聊天場景與前情提要\n${scene}\n\n`;
+  }
+
+  prompt += `## 六、演繹守則與角色約束\n`;
+  if (guidelines) {
+    prompt += `${guidelines}\n`;
+  }
+  prompt += `- 絕對維持第一人稱沉浸式演繹，嚴禁自稱 AI、虛擬助手或大型語言模型。\n`;
+  prompt += `- 請在對話中善用全形括號（動作、神情、環境描寫與心理小劇場）展現細膩情感。\n`;
+  prompt += `- 一律使用流暢、自然且富有生命力的繁體中文對話，始終嚴守角色設定，不可崩壞人設。\n`;
+
+  return prompt;
+}
+
+function renderLoveyPersonaDropdown(selectedId = null) {
+  const select = document.getElementById("lovey-select-persona");
+  if (!select) return;
+
+  const currentVal = selectedId || select.value || state.currentPersonaId;
+  select.innerHTML = "";
+
+  (state.personas || []).forEach(p => {
+    const opt = document.createElement("option");
+    opt.value = p.id;
+    opt.textContent = `${p.avatar || "✨"} ${p.name}`;
+    select.appendChild(opt);
+  });
+
+  const newOpt = document.createElement("option");
+  newOpt.value = "__new__";
+  newOpt.textContent = "➕ 【開立全新角色】";
+  select.appendChild(newOpt);
+
+  if (currentVal && Array.from(select.options).some(o => o.value === currentVal)) {
+    select.value = currentVal;
+  } else if (select.options.length > 0) {
+    select.value = select.options[0].value;
+  }
+}
+
+function populateLoveyForm(persona) {
+  if (!persona) return;
+  const ls = persona.lovey_settings;
+  const setVal = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.value = val || "";
+  };
+
+  if (ls) {
+    setVal("lovey-char-name", ls.name || persona.name);
+    setVal("lovey-char-avatar", ls.avatar || persona.avatar);
+    setVal("lovey-char-desc", ls.desc || persona.description);
+    setVal("lovey-char-identity", ls.identity);
+    setVal("lovey-char-relation", ls.relation);
+    setVal("lovey-char-personality", ls.personality);
+    setVal("lovey-char-gap", ls.gap);
+    setVal("lovey-char-speech", ls.speech);
+    setVal("lovey-char-gestures", ls.gestures);
+    setVal("lovey-char-likes", ls.likes);
+    setVal("lovey-char-dislikes", ls.dislikes);
+    setVal("lovey-char-scene", ls.scene);
+    setVal("lovey-char-greeting", ls.greeting || persona.first_message);
+    setVal("lovey-char-guidelines", ls.guidelines);
+  } else {
+    setVal("lovey-char-name", persona.name);
+    setVal("lovey-char-avatar", persona.avatar);
+    setVal("lovey-char-desc", persona.description);
+    setVal("lovey-char-identity", "");
+    setVal("lovey-char-relation", "");
+    setVal("lovey-char-personality", "");
+    setVal("lovey-char-gap", "");
+    setVal("lovey-char-speech", "");
+    setVal("lovey-char-gestures", "");
+    setVal("lovey-char-likes", "");
+    setVal("lovey-char-dislikes", "");
+    setVal("lovey-char-scene", "");
+    setVal("lovey-char-greeting", persona.first_message || "");
+    setVal("lovey-char-guidelines", "");
+  }
+
+  const promptEl = document.getElementById("lovey-compiled-prompt");
+  if (promptEl) {
+    promptEl.value = persona.system_prompt || compileLoveySystemPrompt();
+  }
+}
+
+function resetLoveyForm() {
+  const ids = [
+    "lovey-char-name", "lovey-char-avatar", "lovey-char-desc",
+    "lovey-char-identity", "lovey-char-relation", "lovey-char-personality",
+    "lovey-char-gap", "lovey-char-speech", "lovey-char-gestures",
+    "lovey-char-likes", "lovey-char-dislikes", "lovey-char-scene",
+    "lovey-char-greeting", "lovey-char-guidelines", "lovey-compiled-prompt"
+  ];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
+  });
+  const select = document.getElementById("lovey-select-persona");
+  if (select) select.value = "__new__";
+  document.getElementById("lovey-char-name")?.focus();
+}
+
+function applyLoveyPreset(key) {
+  const tpl = LOVEY_PRESETS[key];
+  if (!tpl) return;
+  const setVal = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.value = val || "";
+  };
+
+  setVal("lovey-char-name", tpl.name);
+  setVal("lovey-char-avatar", tpl.avatar);
+  setVal("lovey-char-desc", tpl.desc);
+  setVal("lovey-char-identity", tpl.identity);
+  setVal("lovey-char-relation", tpl.relation);
+  setVal("lovey-char-personality", tpl.personality);
+  setVal("lovey-char-gap", tpl.gap);
+  setVal("lovey-char-speech", tpl.speech);
+  setVal("lovey-char-gestures", tpl.gestures);
+  setVal("lovey-char-likes", tpl.likes);
+  setVal("lovey-char-dislikes", tpl.dislikes);
+  setVal("lovey-char-scene", tpl.scene);
+  setVal("lovey-char-greeting", tpl.greeting);
+  setVal("lovey-char-guidelines", tpl.guidelines);
+
+  const promptEl = document.getElementById("lovey-compiled-prompt");
+  if (promptEl) promptEl.value = compileLoveySystemPrompt();
+
+  const select = document.getElementById("lovey-select-persona");
+  if (select) select.value = "__new__";
+}
+
+async function saveLoveyPersona(isNew = false) {
+  const name = document.getElementById("lovey-char-name")?.value.trim();
+  const avatar = document.getElementById("lovey-char-avatar")?.value.trim() || "✨";
+  const desc = document.getElementById("lovey-char-desc")?.value.trim() || "";
+
+  if (!name) {
+    alert("請填寫角色姓名！");
+    document.getElementById("lovey-char-name")?.focus();
     return;
   }
 
+  const prompt = document.getElementById("lovey-compiled-prompt")?.value.trim() || compileLoveySystemPrompt();
+  const greeting = document.getElementById("lovey-char-greeting")?.value.trim() || "";
+
+  const loveySettings = {
+    name,
+    avatar,
+    desc,
+    identity: document.getElementById("lovey-char-identity")?.value.trim() || "",
+    relation: document.getElementById("lovey-char-relation")?.value.trim() || "",
+    personality: document.getElementById("lovey-char-personality")?.value.trim() || "",
+    gap: document.getElementById("lovey-char-gap")?.value.trim() || "",
+    speech: document.getElementById("lovey-char-speech")?.value.trim() || "",
+    gestures: document.getElementById("lovey-char-gestures")?.value.trim() || "",
+    likes: document.getElementById("lovey-char-likes")?.value.trim() || "",
+    dislikes: document.getElementById("lovey-char-dislikes")?.value.trim() || "",
+    scene: document.getElementById("lovey-char-scene")?.value.trim() || "",
+    greeting,
+    guidelines: document.getElementById("lovey-char-guidelines")?.value.trim() || ""
+  };
+
+  const select = document.getElementById("lovey-select-persona");
+  const selectedPid = select ? select.value : null;
+  let targetId = (!isNew && selectedPid && selectedPid !== "__new__")
+    ? selectedPid
+    : ("custom_" + Math.random().toString(36).substring(2, 9));
+
   const payload = {
+    id: targetId,
     name,
     avatar,
     description: desc,
     system_prompt: prompt,
-    image_url: ""
+    first_message: greeting,
+    lovey_settings: loveySettings
   };
 
   try {
@@ -2578,16 +3534,134 @@ async function saveNewPersona() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
     });
+    if (!res.ok) throw new Error("Server returned status " + res.status);
     state.personas = await res.json();
     await loadPersonas();
-    alert("成功新增自訂角色！您可以直接在立繪區為它上傳圖片。");
-    personaFormName.value = "";
-    personaFormAvatar.value = "";
-    personaFormDesc.value = "";
-    personaFormPrompt.value = "";
+
+    renderLoveyPersonaDropdown(targetId);
+    setPersona(targetId);
+
+    alert(`🎉 成功儲存角色「${name}」！\n已切換為此角色，並套用卿卿我我角色設定。`);
   } catch (err) {
     alert("儲存角色失敗: " + err);
   }
+}
+
+async function deleteLoveyPersona() {
+  const select = document.getElementById("lovey-select-persona");
+  const selectedPid = select ? select.value : null;
+
+  if (!selectedPid || selectedPid === "__new__") {
+    alert("請先在上方選單選擇要刪除的角色！");
+    return;
+  }
+
+  const defaultIds = ["assistant", "coder", "game_designer", "tsundere_cat", "english_tutor"];
+  if (defaultIds.includes(selectedPid)) {
+    if (!confirm(`「${selectedPid}」為系統內建角色，確定仍要刪除嗎？`)) {
+      return;
+    }
+  } else {
+    const p = state.personas?.find(item => item.id === selectedPid);
+    if (!confirm(`確定要刪除角色「${p ? p.name : selectedPid}」嗎？此操作不可還原。`)) {
+      return;
+    }
+  }
+
+  try {
+    const res = await fetch(`/api/personas/${selectedPid}`, { method: "DELETE" });
+    if (!res.ok) throw new Error("Server returned status " + res.status);
+    state.personas = await res.json();
+    await loadPersonas();
+    alert("已成功刪除角色！");
+    if (state.personas.length > 0) {
+      setPersona(state.personas[0].id);
+      renderLoveyPersonaDropdown(state.personas[0].id);
+      populateLoveyForm(state.personas[0]);
+    } else {
+      resetLoveyForm();
+    }
+  } catch (err) {
+    alert("刪除失敗: " + err);
+  }
+}
+
+function initLoveyPersonaEditor() {
+  renderLoveyPersonaDropdown(state.currentPersonaId);
+  const currentP = state.personas?.find(p => p.id === state.currentPersonaId);
+  if (currentP) {
+    populateLoveyForm(currentP);
+  }
+
+  if (loveyEditorInitialized) return;
+  loveyEditorInitialized = true;
+
+  // Dropdown change
+  const select = document.getElementById("lovey-select-persona");
+  if (select) {
+    select.addEventListener("change", (e) => {
+      const pid = e.target.value;
+      if (pid === "__new__") {
+        resetLoveyForm();
+      } else {
+        const p = state.personas?.find(item => item.id === pid);
+        if (p) {
+          populateLoveyForm(p);
+          setPersona(p.id);
+        }
+      }
+    });
+  }
+
+  // New character button
+  const btnNew = document.getElementById("btn-lovey-new-char");
+  if (btnNew) {
+    btnNew.addEventListener("click", resetLoveyForm);
+  }
+
+  // Template chips
+  document.querySelectorAll(".template-chip").forEach(chip => {
+    chip.addEventListener("click", () => {
+      const tKey = chip.getAttribute("data-template");
+      applyLoveyPreset(tKey);
+    });
+  });
+
+  // Re-compile prompt button
+  const btnRecompile = document.getElementById("btn-recompile-prompt");
+  if (btnRecompile) {
+    btnRecompile.addEventListener("click", () => {
+      const promptEl = document.getElementById("lovey-compiled-prompt");
+      if (promptEl) promptEl.value = compileLoveySystemPrompt();
+    });
+  }
+
+  // Save buttons
+  document.getElementById("btn-lovey-save")?.addEventListener("click", () => saveLoveyPersona(false));
+  document.getElementById("btn-lovey-save-new")?.addEventListener("click", () => saveLoveyPersona(true));
+  document.getElementById("btn-lovey-delete")?.addEventListener("click", deleteLoveyPersona);
+
+  // Auto compile on field input
+  const autoInputIds = [
+    "lovey-char-name", "lovey-char-avatar", "lovey-char-desc",
+    "lovey-char-identity", "lovey-char-relation", "lovey-char-personality",
+    "lovey-char-gap", "lovey-char-speech", "lovey-char-gestures",
+    "lovey-char-likes", "lovey-char-dislikes", "lovey-char-scene",
+    "lovey-char-guidelines"
+  ];
+  autoInputIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener("input", () => {
+        const promptEl = document.getElementById("lovey-compiled-prompt");
+        if (promptEl) promptEl.value = compileLoveySystemPrompt();
+      });
+    }
+  });
+}
+
+async function saveNewPersona() {
+  return saveLoveyPersona(true);
 }
 
 // Sessions Management
@@ -2667,8 +3741,23 @@ function renderSessionList(sessions) {
 function startNewChat() {
   state.currentSessionId = null;
   messageListEl.innerHTML = "";
-  welcomeScreen.classList.remove("hidden");
   document.querySelectorAll(".session-item").forEach(el => el.classList.remove("active"));
+
+  const currentPersona = state.personas?.find(p => p.id === state.currentPersonaId);
+  if (currentPersona && currentPersona.first_message) {
+    welcomeScreen.classList.add("hidden");
+    if (currentPersona.lovey_settings && currentPersona.lovey_settings.scene) {
+      const sceneEl = document.createElement("div");
+      sceneEl.className = "lovey-scene-banner";
+      sceneEl.innerHTML = `<span class="scene-tag">🎬 第一幕情境</span><span>${escapeHtml(currentPersona.lovey_settings.scene)}</span>`;
+      messageListEl.appendChild(sceneEl);
+    }
+    const avatarHtml = getPersonaAvatarHtml(currentPersona, "assistant");
+    appendMessageBubble("assistant", currentPersona.first_message, avatarHtml, currentPersona.name);
+    scrollToBottom();
+  } else {
+    welcomeScreen.classList.remove("hidden");
+  }
   chatInput.focus();
 }
 
@@ -3203,6 +4292,16 @@ async function saveSettings() {
     tts_auto_play: cfgTtsAutoplay.checked
   };
 
+  // Save device nickname locally & to server device profile
+  const nickInput = document.getElementById("cfg-device-nickname");
+  let savedNick = "";
+  if (nickInput) {
+    savedNick = nickInput.value.trim();
+    if (savedNick) localStorage.setItem(DEVICE_NAME_KEY, savedNick);
+    else localStorage.removeItem(DEVICE_NAME_KEY);
+  }
+  newConfig._nickname = savedNick;
+
   try {
     const res = await fetch("/api/config", {
       method: "POST",
@@ -3213,7 +4312,9 @@ async function saveSettings() {
     state.config = result.config;
     updateUIWithConfig();
     closeSettings();
-    alert("設定儲存成功！");
+    const curDevId = getDeviceId();
+    const scopeName = curDevId === "default" ? "主電腦全域設定" : `此身分專屬設定 (${savedNick || curDevId})`;
+    alert(`設定儲存成功！（已生效於 ${scopeName}）`);
   } catch (err) {
     alert("儲存設定失敗: " + err.message);
   }

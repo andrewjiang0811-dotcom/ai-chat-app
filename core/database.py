@@ -22,10 +22,17 @@ def init_db():
                 id TEXT PRIMARY KEY,
                 title TEXT NOT NULL,
                 character_id TEXT NOT NULL,
+                device_id TEXT DEFAULT 'default',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        # Ensure device_id exists if migrated from earlier schema
+        cursor.execute("PRAGMA table_info(sessions)")
+        cols = [col[1] for col in cursor.fetchall()]
+        if "device_id" not in cols:
+            cursor.execute("ALTER TABLE sessions ADD COLUMN device_id TEXT DEFAULT 'default'")
+
         # Messages table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS messages (
@@ -39,21 +46,28 @@ def init_db():
         """)
         conn.commit()
 
-def create_session(session_id: str, title: str, character_id: str) -> Dict:
+def create_session(session_id: str, title: str, character_id: str, device_id: str = "default") -> Dict:
     now = datetime.now().isoformat()
+    dev_id = device_id or "default"
     with get_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(
-            "INSERT INTO sessions (id, title, character_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
-            (session_id, title, character_id, now, now)
+            "INSERT INTO sessions (id, title, character_id, device_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+            (session_id, title, character_id, dev_id, now, now)
         )
         conn.commit()
-    return {"id": session_id, "title": title, "character_id": character_id, "created_at": now, "updated_at": now}
+    return {"id": session_id, "title": title, "character_id": character_id, "device_id": dev_id, "created_at": now, "updated_at": now}
 
-def get_sessions() -> List[Dict]:
+def get_sessions(device_id: Optional[str] = None) -> List[Dict]:
     with get_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM sessions ORDER BY updated_at DESC")
+        if device_id:
+            cursor.execute(
+                "SELECT * FROM sessions WHERE device_id = ? ORDER BY updated_at DESC",
+                (device_id,)
+            )
+        else:
+            cursor.execute("SELECT * FROM sessions ORDER BY updated_at DESC")
         rows = cursor.fetchall()
         return [dict(row) for row in rows]
 
@@ -78,12 +92,17 @@ def update_session(session_id: str, title: Optional[str] = None, character_id: O
             cursor.execute("UPDATE sessions SET updated_at = ? WHERE id = ?", (now, session_id))
         conn.commit()
 
-def delete_session(session_id: str):
+def delete_session(session_id: str, device_id: Optional[str] = None) -> bool:
     with get_connection() as conn:
         cursor = conn.cursor()
+        if device_id and device_id != "default":
+            cursor.execute("SELECT id FROM sessions WHERE id = ? AND device_id = ?", (session_id, device_id))
+            if not cursor.fetchone():
+                return False
         cursor.execute("DELETE FROM messages WHERE session_id = ?", (session_id,))
         cursor.execute("DELETE FROM sessions WHERE id = ?", (session_id,))
         conn.commit()
+        return True
 
 def add_message(session_id: str, role: str, content: str) -> Dict:
     now = datetime.now().isoformat()

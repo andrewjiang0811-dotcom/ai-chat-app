@@ -8,7 +8,10 @@ import tempfile
 from typing import Dict, Any, Optional, Tuple
 
 try:
-    from Cryptodome.Cipher import AES
+    try:
+        from Crypto.Cipher import AES
+    except ImportError:
+        from Cryptodome.Cipher import AES
     import win32crypt
     HAS_CRYPTO = True
 except ImportError:
@@ -20,9 +23,15 @@ def parse_cookie_string(raw: str) -> Dict[str, str]:
     從任意文字（包括 Request Header、cURL、F12 複製的字串或換行文字）中
     自動擷取 __Secure-1PSID, __Secure-1PSIDTS, __Secure-1PSIDCC
     """
+    import urllib.parse
     result = {}
     if not raw or not isinstance(raw, str):
         return result
+
+    # 0. 移除可能的外層引號或前綴 (例如 cookie: 或 -b 等)
+    clean_raw = raw.strip()
+    if clean_raw.lower().startswith("cookie:"):
+        clean_raw = clean_raw[7:].strip()
 
     # 1. 嘗試直接正則提取
     patterns = {
@@ -32,28 +41,38 @@ def parse_cookie_string(raw: str) -> Dict[str, str]:
     }
 
     for key, pattern in patterns.items():
-        match = re.search(pattern, raw)
+        match = re.search(pattern, clean_raw)
         if match:
-            result[key] = match.group(1).strip()
+            val = match.group(1).strip().strip("\"'").rstrip(";")
+            try:
+                val = urllib.parse.unquote(val)
+            except Exception:
+                pass
+            result[key] = val
 
     # 2. 如果沒有 match 到完整 key=val，但包含純換行（例如使用者貼上三行）
     if len(result) < 3:
-        lines = [line.strip() for line in raw.strip().splitlines() if line.strip()]
+        lines = [line.strip() for line in clean_raw.splitlines() if line.strip()]
         for line in lines:
-            if "=" in line:
-                k, v = line.split("=", 1)
+            line_clean = line.strip().strip("\"'").rstrip(";")
+            if "=" in line_clean:
+                k, v = line_clean.split("=", 1)
                 k = k.strip()
-                v = v.strip().rstrip(";")
+                v = v.strip().strip("\"'").rstrip(";")
+                try:
+                    v = urllib.parse.unquote(v)
+                except Exception:
+                    pass
                 if k in patterns and k not in result:
                     result[k] = v
             else:
                 # 判斷特徵值
-                if line.startswith("g.a000") and "__Secure-1PSID" not in result:
-                    result["__Secure-1PSID"] = line
-                elif line.startswith("sidts-") and "__Secure-1PSIDTS" not in result:
-                    result["__Secure-1PSIDTS"] = line
-                elif (line.startswith("AKE") or len(line) < 120) and "__Secure-1PSIDCC" not in result and not line.startswith("g.a000") and not line.startswith("sidts-"):
-                    result["__Secure-1PSIDCC"] = line
+                if line_clean.startswith("g.a000") and "__Secure-1PSID" not in result:
+                    result["__Secure-1PSID"] = line_clean
+                elif line_clean.startswith("sidts-") and "__Secure-1PSIDTS" not in result:
+                    result["__Secure-1PSIDTS"] = line_clean
+                elif (line_clean.startswith("AKE") or len(line_clean) < 120) and "__Secure-1PSIDCC" not in result and not line_clean.startswith("g.a000") and not line_clean.startswith("sidts-") and len(line_clean) > 20:
+                    result["__Secure-1PSIDCC"] = line_clean
 
     return result
 
@@ -92,6 +111,19 @@ def _decrypt_chromium_cookie_value(enc_val: bytes, master_key: bytes) -> str:
     return ""
 
 
+async def extract_from_cdp_async(ports: Optional[list] = None) -> Tuple[bool, Dict[str, str], str]:
+    """非同步直接從 CDP 埠讀取 Cookie（最推薦在 FastAPI 或 Asyncio 環境使用）"""
+    if ports is None:
+        ports = [9225, 9222]
+    for p in ports:
+        try:
+            ok, cookies, msg = await _extract_from_cdp_async(p)
+            if ok and cookies.get("__Secure-1PSID"):
+                return ok, cookies, msg
+        except Exception:
+            pass
+    return False, {}, "未在指定除錯埠偵測到登入 Cookie"
+
 def extract_from_cdp(ports: Optional[list] = None) -> Tuple[bool, Dict[str, str], str]:
     """
     透過 Chrome DevTools Protocol (CDP) 遠端偵錯埠
@@ -104,17 +136,24 @@ def extract_from_cdp(ports: Optional[list] = None) -> Tuple[bool, Dict[str, str]
     import asyncio
     for p in ports:
         try:
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                import nest_asyncio
-                nest_asyncio.apply()
-                ok, cookies, msg = loop.run_until_complete(_extract_from_cdp_async(p))
+            try:
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                loop = None
+
+            if loop and loop.is_running():
+                try:
+                    import nest_asyncio
+                    nest_asyncio.apply()
+                    ok, cookies, msg = loop.run_until_complete(_extract_from_cdp_async(p))
+                except Exception:
+                    import concurrent.futures
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                        future = executor.submit(lambda: asyncio.run(_extract_from_cdp_async(p)))
+                        ok, cookies, msg = future.result(timeout=4)
             else:
                 ok, cookies, msg = asyncio.run(_extract_from_cdp_async(p))
-            if ok and cookies.get("__Secure-1PSID"):
-                return ok, cookies, msg
-        except RuntimeError:
-            ok, cookies, msg = asyncio.run(_extract_from_cdp_async(p))
+
             if ok and cookies.get("__Secure-1PSID"):
                 return ok, cookies, msg
         except Exception:
@@ -341,3 +380,60 @@ def get_or_sync_gemini_cookies(base_dir: Optional[str] = None) -> Dict[str, str]
             pass
 
     return cookies
+
+
+def find_browser_executable() -> Optional[str]:
+    """尋找本機可用的 Chromium 瀏覽器（Chrome 優先，Edge 為備用）"""
+    candidates = [
+        r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+        r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+        os.path.expandvars(r"%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe"),
+        r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+        r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+        os.path.expandvars(r"%LOCALAPPDATA%\Microsoft\Edge\Application\msedge.exe")
+    ]
+    for p in candidates:
+        if os.path.exists(p):
+            return p
+    return None
+
+
+def get_device_cdp_port(device_id: str) -> int:
+    """為不同裝置/使用者分配獨立的 CDP 偵錯埠，防止同主機多使用者衝突"""
+    if not device_id or device_id == "default":
+        return 9225
+    val = sum(ord(c) for c in device_id)
+    return 9230 + (val % 70)
+
+
+def launch_gemini_login_browser(port: int = 9225, profile_id: str = "default") -> Tuple[bool, str]:
+    """
+    啟動獨立/無痕 Chrome (或 Edge) 瀏覽器，開啟 Gemini 頁面並啟用專屬 CDP 偵錯埠。
+    支援為不同使用者/裝置 (profile_id) 配置完全隔離的暫存目錄與連接埠，互不干擾！
+    """
+    import subprocess
+
+    exe = find_browser_executable()
+    if not exe:
+        return False, "未檢測到本機安裝之 Google Chrome 或 Microsoft Edge 瀏覽器！"
+
+    # 使用專屬獨立暫存資料目錄，避免與現有運行的瀏覽器衝突
+    safe_id = "".join(c for c in (profile_id or "default") if c.isalnum() or c in ("-", "_")).strip() or "default"
+    data_dir = os.path.join(tempfile.gettempdir(), f"gemini_chrome_{safe_id}")
+    os.makedirs(data_dir, exist_ok=True)
+
+    cmd = [
+        exe,
+        f"--user-data-dir={data_dir}",
+        f"--remote-debugging-port={port}",
+        "--no-first-run",
+        "--no-default-browser-check",
+        "https://gemini.google.com"
+    ]
+
+    try:
+        subprocess.Popen(cmd)
+        browser_name = "Google Chrome" if "chrome.exe" in exe.lower() else "Microsoft Edge"
+        return True, f"已成功開啟 {browser_name} 專屬登入視窗（Port: {port}，身分: {safe_id}）！請在視窗中登入您的 Google 帳號。"
+    except Exception as e:
+        return False, f"開啟瀏覽器失敗: {str(e)}"

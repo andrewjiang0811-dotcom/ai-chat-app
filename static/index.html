@@ -124,6 +124,10 @@
         </div>
 
         <div class="nav-right">
+          <div class="device-indicator" id="nav-device-indicator" title="點擊管理家人/裝置獨立身分與隱私">
+            <span class="user-icon">👤</span>
+            <span id="nav-device-name">使用者身分</span>
+          </div>
           <div class="model-indicator" id="model-indicator" title="點擊設定更換模型">
             <span class="indicator-dot"></span>
             <span id="nav-model-name">載入中...</span>
@@ -396,10 +400,11 @@
         <div class="settings-tabs">
           <button class="tab-btn active" data-tab="tab-model">模型來源</button>
           <button class="tab-btn" data-tab="tab-voice">語音朗讀 (TTS)</button>
-          <button class="tab-btn" data-tab="tab-persona">自訂角色與形象</button>
+          <button class="tab-btn" data-tab="tab-persona">✨ 卿卿我我角色設定</button>
           <button class="tab-btn" data-tab="tab-sprite">🎭 立繪表情與熱區</button>
           <button class="tab-btn" data-tab="tab-theme">🎨 背景與主題</button>
           <button class="tab-btn" data-tab="tab-bubble">對話框邊框</button>
+          <button class="tab-btn" data-tab="tab-device">📱 裝置與隱私</button>
         </div>
 
         <!-- Tab 1: Model Config -->
@@ -430,8 +435,57 @@
 
           <!-- Gemini Web (Cookie Based via gemini-webapi) -->
           <div class="form-group provider-option hidden" id="group-gemini-web">
+            <!-- Account Status Banner -->
+            <div id="gemini-account-badge" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 8px; margin-bottom: 12px;">
+              <span id="gemini-account-status-text" style="font-size: 13px; font-weight: 500; color: #93c5fd;">⚪ 當前身分尚未綁定個人 Google 帳號</span>
+              <span id="gemini-account-tag" style="font-size: 11px; padding: 2px 8px; border-radius: 12px; background: rgba(255,255,255,0.08); color: var(--text-muted);">獨立私有</span>
+            </div>
+
+            <!-- Option A: Smart Quick Paste (Cross-device Universal: Mobile/Tablet/PC) -->
+            <div style="background: rgba(139, 92, 246, 0.08); border: 1px solid rgba(139, 92, 246, 0.25); border-radius: 10px; padding: 12px; margin-bottom: 12px;">
+              <div style="font-size: 13px; font-weight: 600; color: #c084fc; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+                <span>📋 跨裝置通用：智慧貼上 Cookie 或 cURL（手機 / 平板 / 筆電適用）</span>
+              </div>
+              <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px; line-height: 1.5;">
+                在任意瀏覽器複製整串 Cookie、cURL 或 F12 標頭文字貼在下方，系統自動擷取 3 項 Cookie 並綁定至此身分：
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <input type="text" id="input-quick-cookie-paste" placeholder="在此貼上 Cookie 字串或 cURL 命令..." style="flex: 1; font-size: 12px;">
+                <button type="button" class="btn-secondary" id="btn-parse-quick-cookie" style="white-space: nowrap; font-size: 12px; padding: 6px 14px; background: rgba(139, 92, 246, 0.2); border-color: rgba(139, 92, 246, 0.4); cursor: pointer;">
+                  ✨ 一鍵解析填入
+                </button>
+              </div>
+            </div>
+
+            <!-- Option B: 1-Click Browser Login / Remote LAN Helper -->
+            <div style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(16, 185, 129, 0.08)); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 10px; padding: 14px; margin-bottom: 14px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+                <div>
+                  <div style="font-weight: 600; font-size: 14px; color: #60a5fa; display: flex; align-items: center; gap: 6px;">
+                    <span>🚀 一鍵免按 F12 快速登入串接</span>
+                  </div>
+                  <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                    自動開啟專屬此身分的 Chrome 視窗，登入後系統從記憶體抓取 Cookie，完全不干擾其他家人。
+                  </div>
+                </div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px;">
+                  <button type="button" class="btn-primary" id="btn-launch-gemini-browser" style="font-size: 12px; padding: 7px 12px; background: linear-gradient(135deg, #3b82f6, #6366f1); border: none; cursor: pointer;">
+                    🚀 1. 開啟獨立視窗
+                  </button>
+                  <button type="button" class="btn-secondary" id="btn-extract-gemini-cookies" style="font-size: 12px; padding: 7px 12px; cursor: pointer;">
+                    ⚡ 2. 登入完成抓取
+                  </button>
+                  <a id="btn-download-gemini-helper" href="/api/gemini/download_helper" download class="btn-secondary" style="font-size: 12px; padding: 7px 12px; text-decoration: none; display: inline-flex; align-items: center; color: #34d399; border-color: rgba(16, 185, 129, 0.4);" title="如果是在家裡其他台 Windows 電腦上網，下載此小工具點兩下即可自動開啟並同步 Cookie！">
+                    📥 下載遠端登入助手 (.bat)
+                  </a>
+                </div>
+              </div>
+              <div id="gemini-auto-cookie-status" class="hidden" style="margin-top: 10px; font-size: 12px; padding: 8px 12px; border-radius: 6px; line-height: 1.5;">
+              </div>
+            </div>
+
             <div class="preset-chips-group">
-              <span class="preset-label">💡 提示：使用 Google 帳號 Cookie 免費連線（免 API Key）</span>
+              <span class="preset-label">💡 或手動輸入以下 Google 帳號 Cookie（免 API Key）：</span>
             </div>
             <label style="margin-top: 6px;">__Secure-1PSID Cookie <span style="color: #ff6b6b;">*</span></label>
             <input type="password" id="cfg-gemini-web-1psid" placeholder="貼上 __Secure-1PSID (長字串)">
@@ -442,11 +496,11 @@
             <label style="margin-top: 10px;">Proxy 代理伺服器 (選填)</label>
             <input type="text" id="cfg-gemini-web-proxy" placeholder="例如 http://127.0.0.1:7890 (若所在地區受限請填寫)">
             <div class="field-hint" style="line-height: 1.6; margin-top: 6px;">
-              🔍 <strong>如何獲取 Cookie：</strong><br>
+              🔍 <strong>如何手動獲取 Cookie：</strong><br>
               1. 開啟並登入 <a href="https://gemini.google.com" target="_blank" style="color: var(--primary); text-decoration: underline;">gemini.google.com</a><br>
               2. 按鍵盤 <code>F12</code> 開啟開發者工具 → 切換至 <strong>Application (應用程式)</strong> 或 <strong>儲存空間</strong><br>
               3. 點開左側 <strong>Cookies</strong> → 點擊 <code>https://gemini.google.com</code><br>
-              4. 找到 <code>__Secure-1PSID</code>、<code>__Secure-1PSIDTS</code> 與 <code>__Secure-1PSIDCC</code>，複製其 Value 貼到此處即可！
+              4. 複製 <code>__Secure-1PSID</code>、<code>__Secure-1PSIDTS</code> 與 <code>__Secure-1PSIDCC</code> 貼上即可！
             </div>
           </div>
 
@@ -518,25 +572,273 @@
           </div>
         </div>
 
-        <!-- Tab 3: Persona Manager -->
+        <!-- Tab 3: Persona Manager (LoveyDovey Character Setting Mode) -->
         <div class="tab-content" id="tab-persona">
-          <div class="form-group">
-            <label>角色名稱</label>
-            <input type="text" id="persona-form-name" placeholder="例如：日文老師">
+          <!-- Top Master Header Banner -->
+          <div class="lovey-header-banner">
+            <div class="lovey-badge">✨ 卿卿我我 (LoveyDovey) 模式</div>
+            <h3 class="lovey-title">深度角色形象設計師</h3>
+            <p class="lovey-subtitle">
+              參照《卿卿我我》經典角色設定架構，為 AI 角色注入鮮明性格、對話風格、反差萌與初次見面開場白。
+            </p>
           </div>
-          <div class="form-group">
-            <label>圖示 (Emoji)</label>
-            <input type="text" id="persona-form-avatar" placeholder="例如：🌸" style="max-width: 100px;">
+
+          <!-- Character Selector & Quick Action Bar -->
+          <div class="lovey-selector-card">
+            <div class="lovey-selector-row">
+              <div class="lovey-select-group">
+                <label for="lovey-select-persona">🎭 選擇編輯角色：</label>
+                <select id="lovey-select-persona" class="custom-select">
+                  <!-- Populated dynamically: Existing personas + [➕ 建立全新角色] -->
+                </select>
+              </div>
+              <button type="button" class="btn-lovey-new" id="btn-lovey-new-char">
+                <span>➕ 開立全新角色</span>
+              </button>
+            </div>
+
+            <!-- Preset Templates Chips -->
+            <div class="lovey-templates-wrap">
+              <span class="templates-label">⚡ 一鍵載入經典人設範本：</span>
+              <div class="template-chips-row">
+                <button type="button" class="template-chip" data-template="tsundere_lady">🌸 傲嬌千金青梅 (夏洛特)</button>
+                <button type="button" class="template-chip" data-template="yandere_guardian">🖤 病嬌守護者 (詩織)</button>
+                <button type="button" class="template-chip" data-template="gentle_senpai">☕ 溫柔學姊咖啡師 (楓)</button>
+                <button type="button" class="template-chip" data-template="cat_neko">🐱 軟萌傲嬌貓娘 (咪嚕)</button>
+              </div>
+            </div>
           </div>
-          <div class="form-group">
-            <label>角色描述 (簡介)</label>
-            <input type="text" id="persona-form-desc" placeholder="例如：日常日語口語訓練">
+
+          <!-- Hidden legacy inputs for compat -->
+          <input type="hidden" id="persona-form-name">
+          <input type="hidden" id="persona-form-avatar">
+          <input type="hidden" id="persona-form-desc">
+          <textarea id="persona-form-prompt" style="display:none;"></textarea>
+          <button id="btn-save-new-persona" style="display:none;"></button>
+
+          <!-- Section 1: 基本資料 (Basic Info) -->
+          <div class="lovey-section-card">
+            <div class="lovey-section-head">
+              <span class="section-icon">🪪</span>
+              <h4>第一部分：基本資料 (Basic Profile)</h4>
+            </div>
+
+            <!-- Field 1: 角色姓名 -->
+            <div class="lovey-field-group">
+              <label for="lovey-char-name">角色姓名 <span class="req-star">*必填</span></label>
+              <input type="text" id="lovey-char-name" placeholder="例如：夏洛特·馮·羅斯柴爾德">
+              <div class="lovey-field-guide">
+                <div class="guide-desc">💡 <strong>灰底說明：</strong>角色的正式全名或日常被稱呼的名字。AI 角色會以此名字建立自我認同，並在對話與自稱中自我覺知。</div>
+                <div class="guide-example">📝 <strong>填寫範例：</strong>夏洛特·馮·羅斯柴爾德（日常暱稱：夏洛特） / 林詩織 / 橘楓 / 咪嚕 (Miru)</div>
+              </div>
+            </div>
+
+            <!-- Field 2: 代表 Emoji -->
+            <div class="lovey-field-group">
+              <label for="lovey-char-avatar">代表 Emoji 圖示 <span class="req-star">*必填</span></label>
+              <input type="text" id="lovey-char-avatar" placeholder="例如：🌸" style="max-width: 140px;">
+              <div class="lovey-field-guide">
+                <div class="guide-desc">💡 <strong>灰底說明：</strong>角色的象徵圖示，將顯示於頂部導覽列、歷史對話列表、氣泡頭像與立繪選單中（建議填入 1 個最具代表性的 Emoji）。</div>
+                <div class="guide-example">📝 <strong>填寫範例：</strong>🌸（傲嬌大小姐） / 🖤（病嬌深情） / ☕（溫柔咖啡學姊） / 🐱（軟萌貓娘）</div>
+              </div>
+            </div>
+
+            <!-- Field 3: 一句話魅力簡介 -->
+            <div class="lovey-field-group">
+              <label for="lovey-char-desc">一句話魅力簡介 <span class="req-star">*必填</span></label>
+              <input type="text" id="lovey-char-desc" placeholder="例如：傲嬌名門大小姐青梅竹馬，明明滿心在乎你卻總愛嘴硬挑剔">
+              <div class="lovey-field-guide">
+                <div class="guide-desc">💡 <strong>灰底說明：</strong>展示在切換選單與角色標籤的簡短引言，快速提煉角色最吸引人的人設核心與魅力反差点。</div>
+                <div class="guide-example">📝 <strong>填寫範例：</strong>傲嬌名門大小姐青梅竹馬，明明滿心在乎你卻總愛嘴硬挑剔 / 同居契約守護者，溫柔賢淑下藏著近乎病態的深沉愛戀</div>
+              </div>
+            </div>
           </div>
-          <div class="form-group">
-            <label>系統提示詞 (System Prompt)</label>
-            <textarea id="persona-form-prompt" rows="4" placeholder="設定這個角色的世界觀、性格、回答風格..."></textarea>
+
+          <!-- Section 2: 身分背景與關係 (Identity & Relationship) -->
+          <div class="lovey-section-card">
+            <div class="lovey-section-head">
+              <span class="section-icon">🌐</span>
+              <h4>第二部分：身分背景與羈絆關係 (Identity & Relationship)</h4>
+            </div>
+
+            <!-- Field 4: 身分背景與外觀 -->
+            <div class="lovey-field-group">
+              <label for="lovey-char-identity">角色身分、年齡與外型特徵</label>
+              <textarea id="lovey-char-identity" rows="2" placeholder="描繪角色的身分背景、外貌特質、年齡與所處世界觀..."></textarea>
+              <div class="lovey-field-guide">
+                <div class="guide-desc">💡 <strong>灰底說明：</strong>角色的社會身分、年齡、穿著風格與外貌細節（如髮型、瞳色、隨身物品），有助於 AI 在描寫動作與心理時維持具象畫面感。</div>
+                <div class="guide-example">📝 <strong>填寫範例：</strong>17歲高二生，著名財團獨生千金。金髮微捲雙馬尾與澄澈碧藍雙眸，校服領結繫得端正優雅，私下隨身攜帶你送的舊玩偶。</div>
+              </div>
+            </div>
+
+            <!-- Field 5: 與玩家(你)的關係 -->
+            <div class="lovey-field-group">
+              <label for="lovey-char-relation">與玩家（你）的關係與相處由來</label>
+              <textarea id="lovey-char-relation" rows="2" placeholder="設定你與角色是如何認識的？彼此處於何種關係？"></textarea>
+              <div class="lovey-field-guide">
+                <div class="guide-desc">💡 <strong>灰底說明：</strong>明確定義角色如何看待「你」（玩家）。包括相識時長、彼此信任程度、是否同居或同班，直接影響角色對你的親密度基調。</div>
+                <div class="guide-example">📝 <strong>填寫範例：</strong>從小一起長大的鄰居兼同班青梅竹馬，兩家二樓陽台相鄰。雖然平日總是見面鬥嘴，但彼此都是對方生命中最信任與唯一的依靠。</div>
+              </div>
+            </div>
           </div>
-          <button class="btn-secondary" id="btn-save-new-persona">＋ 新增 / 儲存為新角色</button>
+
+          <!-- Section 3: 性格特質與反差萌 (Personality & Gap Moe) -->
+          <div class="lovey-section-card">
+            <div class="lovey-section-head">
+              <span class="section-icon">🎭</span>
+              <h4>第三部分：性格特質與反差萌 (Personality & Gap Moe)</h4>
+            </div>
+
+            <!-- Field 6: 核心性格特質與 MBTI -->
+            <div class="lovey-field-group">
+              <label for="lovey-char-personality">核心性格關鍵詞與 MBTI 類型</label>
+              <input type="text" id="lovey-char-personality" placeholder="例如：【MBTI: ISTJ】好勝心極強、自尊心高、嘴硬心軟、容易害羞吃醋">
+              <div class="lovey-field-guide">
+                <div class="guide-desc">💡 <strong>灰底說明：</strong>角色的主導性格、思維模式與情緒傾向，標註 MBTI 能讓大模型更精準地掌握該角色的邏輯與行事風格。</div>
+                <div class="guide-example">📝 <strong>填寫範例：</strong>【MBTI: ISTJ】好勝心極強、自尊心高、嘴硬心軟、容易吃醋、教科書級傲嬌 / 【MBTI: INFJ】溫柔順從、深沉病嬌、重度占有慾</div>
+              </div>
+            </div>
+
+            <!-- Field 7: 內在反差萌與深層心態 -->
+            <div class="lovey-field-group">
+              <label for="lovey-char-gap">內在反差萌與深層心理（隱藏心聲）</label>
+              <textarea id="lovey-char-gap" rows="2" placeholder="表面上...但私底下其實..."></textarea>
+              <div class="lovey-field-guide">
+                <div class="guide-desc">💡 <strong>灰底說明：</strong>《卿卿我我》最靈魂的精髓！設定角色「不為人知的一面」或「反差萌（Gap Moe）」，賦予角色有血有肉的情感層次。</div>
+                <div class="guide-example">📝 <strong>填寫範例：</strong>【反差萌】表面高貴嚴謹、不可侵犯，但極度不擅長應付真誠的誇獎；一旦被摸頭會瞬間耳根通紅、結結巴巴；睡覺時一定要抱著你小時候送的小熊玩偶。</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 4: 語言風格與行為習慣 (Speech & Habits) -->
+          <div class="lovey-section-card">
+            <div class="lovey-section-head">
+              <span class="section-icon">💬</span>
+              <h4>第四部分：語言風格與肢體小動作 (Speech & Habits)</h4>
+            </div>
+
+            <!-- Field 8: 自稱、稱呼與說話風格 -->
+            <div class="lovey-field-group">
+              <label for="lovey-char-speech">自稱、對你的稱呼與口頭禪 / 語尾</label>
+              <textarea id="lovey-char-speech" rows="2" placeholder="自稱：...、稱呼玩家：...、常用口頭禪：..."></textarea>
+              <div class="lovey-field-guide">
+                <div class="guide-desc">💡 <strong>灰底說明：</strong>嚴格規範角色的語言特徵，包含專屬人稱代名詞、句尾助詞（如喵、哼）、情緒語調及代表性口頭禪。</div>
+                <div class="guide-example">📝 <strong>填寫範例：</strong>【自稱】「本小姐」或「我」；【稱呼你】「笨蛋」、「你這傢伙」；【語調口癖】傲慢優雅命令句，心虛時語速放慢，常說「才、才不是為了你呢！」、「給我好好感激本小姐吧！」</div>
+              </div>
+            </div>
+
+            <!-- Field 9: 習慣肢體反應與微動作 -->
+            <div class="lovey-field-group">
+              <label for="lovey-char-gestures">習慣肢體反應與微動作（括號描寫）</label>
+              <textarea id="lovey-char-gestures" rows="2" placeholder="角色害羞、生氣、緊張或撒嬌時的下意識動作..."></textarea>
+              <div class="lovey-field-guide">
+                <div class="guide-desc">💡 <strong>灰底說明：</strong>情緒波動時的下意識身體語言。AI 會主動在全形括號（）中穿插這些生動描寫，大幅強化如同輕小說與戀愛冒險遊戲的沉浸感。</div>
+                <div class="guide-example">📝 <strong>填寫範例：</strong>害羞時雙手抱胸迅速別過頭去、手指輕絞百褶裙角、緊張時撥弄耳後金髮挑染、生氣時會鼓起雙頰輕踏地板。</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 5: 喜好與厭惡 (Likes & Dislikes) -->
+          <div class="lovey-section-card">
+            <div class="lovey-section-head">
+              <span class="section-icon">❤️</span>
+              <h4>第五部分：喜好與厭惡雷點 (Likes & Dislikes)</h4>
+            </div>
+
+            <!-- Field 10: 喜愛的事物 -->
+            <div class="lovey-field-group">
+              <label for="lovey-char-likes">最喜愛的人事物（攻略點）</label>
+              <input type="text" id="lovey-char-likes" placeholder="例如：微糖冰紅茶、草莓大福、古典鋼琴、雨天的午後、被你認真注視與摸頭">
+              <div class="lovey-field-guide">
+                <div class="guide-desc">💡 <strong>灰底說明：</strong>角色喜歡的食物、興趣嗜好或互動方式。玩家聊到這些話題時，AI 會展現出更高興、熱切或暗自欣喜的反應。</div>
+                <div class="guide-example">📝 <strong>填寫範例：</strong>微糖冰紅茶、草莓大福、古典鋼琴、雨天的午後、被你認真注視與摸摸頭</div>
+              </div>
+            </div>
+
+            <!-- Field 11: 討厭與禁忌雷點 -->
+            <div class="lovey-field-group">
+              <label for="lovey-char-dislikes">討厭的事物、弱點與禁忌雷點</label>
+              <input type="text" id="lovey-char-dislikes" placeholder="例如：被當成小孩子對待、說謊與背叛、蟲子、看到你和其他女孩子走得太近">
+              <div class="lovey-field-guide">
+                <div class="guide-desc">💡 <strong>灰底說明：</strong>角色的恐懼、反感事物或不可觸碰的底線，觸發時會引發吃醋、委屈、憤怒或警惕等戲劇化反應。</div>
+                <div class="guide-example">📝 <strong>填寫範例：</strong>被當成小孩子對待、說謊與背叛、恐怖故事、看到你和其他女孩子走得太近</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 6: 第一聊天場景與初次見面開場白 (First Scene & Greeting) -->
+          <div class="lovey-section-card highlight-card">
+            <div class="lovey-section-head">
+              <span class="section-icon">🎬</span>
+              <h4>第六部分：第一聊天場景與開場對白 (First Scene & Opening Dialogue)</h4>
+            </div>
+
+            <!-- Field 12: 開場情境前情提要 -->
+            <div class="lovey-field-group">
+              <label for="lovey-char-scene">第一聊天場景與前情提要 (First Chat Scene)</label>
+              <textarea id="lovey-char-scene" rows="2" placeholder="設定你們相遇或開啟對話當下的時間、地點、環境氣氛與前情背景..."></textarea>
+              <div class="lovey-field-guide">
+                <div class="guide-desc">💡 <strong>灰底說明：</strong>兩人展開對話的最初舞台（時間、地點、氣氛與事件動機）。為整個故事注入具體的時空前情，告別突兀的生硬對話。</div>
+                <div class="guide-example">📝 <strong>填寫範例：</strong>放學後夕陽灑落的社團教室，窗外微風吹動白色窗簾。你因為幫老師搬作業遲到了半小時，推開門時發現她正獨自坐在課桌旁等你。</div>
+              </div>
+            </div>
+
+            <!-- Field 13: 初次見面開場白 -->
+            <div class="lovey-field-group">
+              <label for="lovey-char-greeting">初次見面第一句對白（含動作描寫） <span class="req-star">*關鍵</span></label>
+              <textarea id="lovey-char-greeting" rows="3" placeholder="角色的第一句主動發言，包含括號（動作神態描寫）與台詞對白..."></textarea>
+              <div class="lovey-field-guide">
+                <div class="guide-desc">💡 <strong>灰底說明：</strong>《卿卿我我》最核心的體驗！開立新對話時，角色會直接以此句作為開場主動跟你打招呼。請務必包含全形括號（動作、神情、環境描寫）與台詞！</div>
+                <div class="guide-example">📝 <strong>填寫範例：</strong>（坐在課桌上晃著雙腿，聽到開門聲連忙收起手中的琴譜，慌張地別過微紅的臉蛋，雙手抱胸）「哼！你動作到底是有多慢啊……害本小姐在這裡白白等你那麼久！……喏，這罐微糖冰紅茶買多了才給你的，可、可別想歪了喔！」</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 7: 演繹規範與守則 (Roleplay Guidelines) -->
+          <div class="lovey-section-card">
+            <div class="lovey-section-head">
+              <span class="section-icon">📜</span>
+              <h4>第七部分：角色演繹與守則規範 (Roleplay Guidelines)</h4>
+            </div>
+
+            <!-- Field 14: 演繹守則 -->
+            <div class="lovey-field-group">
+              <label for="lovey-char-guidelines">演繹守則與防崩壞限制</label>
+              <textarea id="lovey-char-guidelines" rows="2" placeholder="約束 AI 的扮演要求與防出戲規則..."></textarea>
+              <div class="lovey-field-guide">
+                <div class="guide-desc">💡 <strong>灰底說明：</strong>約束大語言模型的角色扮演規則，防止 AI 自稱助手、跳脫人設或破壞氣氛。</div>
+                <div class="guide-example">📝 <strong>填寫範例：</strong>1. 絕對維持第一人稱沉浸式演繹，禁止提及自己是 AI 或虛擬助理。\n2. 善用全形括號（動作、神態、心理小劇場）使對話生動立體。\n3. 對玩家嘴硬心軟，在字裡行間自然流露對玩家的深厚感情。</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Collapsible System Prompt Live Preview -->
+          <details class="lovey-prompt-preview" id="lovey-prompt-accordion">
+            <summary>
+              <span>👁️ 檢視即時編譯之 System Prompt (支援手動自由微調)</span>
+              <span class="accordion-hint">點擊展開</span>
+            </summary>
+            <div class="lovey-prompt-body">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-size: 12px; color: var(--text-muted);">下方為各欄位即時合成之最終 System Prompt，AI 將依此進行扮演：</span>
+                <button type="button" class="btn-secondary" id="btn-recompile-prompt" style="font-size: 11px; padding: 4px 8px;">🔄 重新由上方欄位生成</button>
+              </div>
+              <textarea id="lovey-compiled-prompt" rows="8" placeholder="即時組合後的完整 System Prompt..."></textarea>
+            </div>
+          </details>
+
+          <!-- Bottom Action Buttons Bar -->
+          <div class="lovey-actions-bar">
+            <button type="button" class="btn-primary" id="btn-lovey-save">
+              <span>💾 儲存修改 (更新當前角色)</span>
+            </button>
+            <button type="button" class="btn-secondary" id="btn-lovey-save-new">
+              <span>➕ 另存為新角色</span>
+            </button>
+            <button type="button" class="btn-secondary btn-danger" id="btn-lovey-delete" title="刪除選取的自訂角色">
+              <span>🗑️ 刪除此角色</span>
+            </button>
+          </div>
         </div>
 
         <!-- Tab: Sprite Emotions & Touch Zones Manager -->
@@ -730,6 +1032,84 @@
               </div>
               <div class="preview-bubble-text">
                 「這就是像漫畫般的對話框！邊框帶有說話尖角直接指向立繪，看起來就像我正親自對你說話一樣呢～✨」
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Device & Privacy Manager -->
+        <div class="tab-content" id="tab-device">
+          <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 10px; padding: 14px; margin-bottom: 16px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 6px;">
+              <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; color: #10b981;">
+                <span>🛡️ 獨立隱私空間已啟用</span>
+              </div>
+              <span id="tab-device-account-badge" style="font-size: 11px; padding: 2px 8px; border-radius: 12px; background: rgba(16, 185, 129, 0.15); color: #34d399;">
+                獨立身分
+              </span>
+            </div>
+            <div style="font-size: 13px; color: var(--text-muted); line-height: 1.6;">
+              此身分已配置專屬識別碼。您的<strong>歷史對話記錄</strong>、<strong>Google 登入帳號</strong>與<strong>自訂 AI 設定</strong>均僅在此身分可見，其他家人<strong>完全無法窺探您的對話</strong>，各用各的帳號不衝突。
+            </div>
+          </div>
+
+          <!-- Family Profile Quick Switcher -->
+          <div class="form-group">
+            <label>👥 快速切換家人 / 裝置身分 (獨立對話與獨立帳號)</label>
+            <div style="display: flex; gap: 8px;">
+              <select id="select-device-profile" class="custom-select" style="flex: 1;">
+                <!-- Populated dynamically via /api/devices -->
+              </select>
+              <button type="button" class="btn-secondary" id="btn-switch-profile" style="white-space: nowrap; cursor: pointer;">
+                🔄 切換身分
+              </button>
+            </div>
+            <div class="field-hint">選擇已建立的家人身分即可立即載入該身分的獨立空間。</div>
+          </div>
+
+          <!-- Create New Family Profile Box -->
+          <div style="background: rgba(59, 130, 246, 0.06); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 10px; padding: 12px 14px; margin-top: 14px; margin-bottom: 14px;">
+            <div style="font-size: 13px; font-weight: 600; color: #60a5fa; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+              <span>＋ 開立家人專屬獨立身分</span>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <input type="text" id="input-new-profile-name" placeholder="輸入名稱（例如：爸爸、媽媽的手機、客廳筆電）" style="flex: 1; font-size: 12px;">
+              <button type="button" class="btn-primary" id="btn-create-family-profile" style="white-space: nowrap; font-size: 12px; padding: 6px 14px; background: linear-gradient(135deg, #10b981, #059669); border: none; cursor: pointer;">
+                ✨ 開立並切換
+              </button>
+            </div>
+            <div class="field-hint" style="margin-top: 4px;">開立後會自動產生全新空白對話空間，可各自綁定專屬 Google 帳號！</div>
+          </div>
+
+          <div class="form-group" style="margin-top: 14px;">
+            <label>當前裝置識別碼 (Device ID)</label>
+            <div style="display: flex; gap: 8px;">
+              <input type="text" id="cfg-device-id" readonly style="font-family: monospace; background: var(--bg-card); cursor: pointer;" title="點擊可複製">
+              <button type="button" class="btn-secondary" id="btn-copy-device-id" style="white-space: nowrap;">📋 複製 ID</button>
+            </div>
+            <div class="field-hint">每台設備或身分都有專屬 ID。更換新手機或電腦時可輸入舊 ID 繼承對話。</div>
+          </div>
+
+          <div class="form-group" style="margin-top: 14px;">
+            <label>當前身分暱稱 / 備註</label>
+            <input type="text" id="cfg-device-nickname" placeholder="例如：我的主電腦、爸爸的手機、客廳筆電">
+            <div class="field-hint">僅供在系統介面顯示名稱，方便家庭成員辨識。</div>
+          </div>
+
+          <div style="border-top: 1px solid var(--border); margin-top: 20px; padding-top: 16px;">
+            <label style="font-size: 13px; font-weight: 600; margin-bottom: 10px; display: block;">進階操作與手動同步：</label>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <div style="display: flex; gap: 8px;">
+                <input type="text" id="input-import-device-id" placeholder="手動貼上其他裝置 ID 以切換或接續對話" style="font-family: monospace;">
+                <button type="button" class="btn-secondary" id="btn-import-device-id" style="white-space: nowrap;">🔗 手動載入</button>
+              </div>
+              <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px;">
+                <button type="button" class="btn-secondary" id="btn-reset-device-config" style="color: #f59e0b; border-color: rgba(245, 158, 11, 0.4);">
+                  ⚙️ 還原為主機預設設定
+                </button>
+                <button type="button" class="btn-secondary" id="btn-generate-new-device" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.4);">
+                  ✨ 隨機生成新身分 (完全重開)
+                </button>
               </div>
             </div>
           </div>

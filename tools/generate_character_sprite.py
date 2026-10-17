@@ -12,6 +12,12 @@ from typing import Dict, Any, Optional
 
 import cv2
 import numpy as np
+import enum
+if not hasattr(enum, "StrEnum"):
+    class StrEnum(str, enum.Enum):
+        pass
+    enum.StrEnum = StrEnum
+
 from gemini_webapi import GeminiClient
 
 # 確保引用本機 core 模組

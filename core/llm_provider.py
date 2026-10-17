@@ -3,12 +3,17 @@ import time
 import httpx
 from typing import AsyncIterator, List, Dict, Optional, Any
 
+# Ensure compatibility for Python 3.10 and earlier where enum.StrEnum is absent
+import core.compat
+
 try:
     from gemini_webapi import GeminiClient
     from gemini_webapi.constants import AccountStatus, Model as GeminiWebModel
     HAS_GEMINI_WEBAPI = True
-except ImportError:
+    _GEMINI_WEBAPI_ERROR = None
+except Exception as e:
     HAS_GEMINI_WEBAPI = False
+    _GEMINI_WEBAPI_ERROR = str(e)
 
 DEFAULT_OLLAMA_HOST = "http://localhost:11434"
 
@@ -74,18 +79,18 @@ async def get_gemini_webapi_models(
         if secure_1psidcc:
             client._cookies.set("__Secure-1PSIDCC", secure_1psidcc.strip(), domain=".google.com", secure=True)
         await client.init()
-        if client.account_status == AccountStatus.AVAILABLE:
-            models_list = client.list_models()
-            await client.close()
-            if models_list:
-                valid_models = []
-                for m in models_list:
-                    name = getattr(m, "model_name", None) or getattr(m, "model_id", None) or str(m)
-                    if "argon" in name.lower():
-                        continue
-                    valid_models.append(name)
-                return valid_models if valid_models else DEFAULT_GEMINI_WEB_MODELS
+        models_list = client.list_models()
         await client.close()
+        if models_list:
+            valid_models = []
+            for m in models_list:
+                name = getattr(m, "model_name", None) or getattr(m, "model_id", None) or str(m)
+                if not name or "argon" in name.lower():
+                    continue
+                valid_models.append(name)
+            if valid_models:
+                return valid_models
+        return DEFAULT_GEMINI_WEB_MODELS
     except Exception:
         pass
     return DEFAULT_GEMINI_WEB_MODELS
@@ -155,11 +160,12 @@ async def test_provider_connection(
                 "message": "請先填寫 Google Gemini 網頁版 Cookie (__Secure-1PSID)！"
             }
         if not HAS_GEMINI_WEBAPI:
+            err_detail = f"（原因: {_GEMINI_WEBAPI_ERROR}）" if _GEMINI_WEBAPI_ERROR else ""
             return {
                 "success": False,
                 "latency_ms": 0,
                 "models": [],
-                "message": "系統尚未安裝 gemini-webapi 套件，請執行 pip install gemini-webapi"
+                "message": f"系統載入 gemini-webapi 套件失敗 {err_detail}，請執行 pip install gemini-webapi"
             }
         try:
             client = GeminiClient(
@@ -171,31 +177,34 @@ async def test_provider_connection(
                 client._cookies.set("__Secure-1PSIDCC", secure_1psidcc.strip(), domain=".google.com", secure=True)
             await client.init()
             latency = int((time.time() - t0) * 1000)
-            if client.account_status == AccountStatus.AVAILABLE:
-                models_list = client.list_models()
-                models = [getattr(m, "model_name", None) or getattr(m, "model_id", None) or str(m) for m in models_list] if models_list else DEFAULT_GEMINI_WEB_MODELS
+            hard_blocks = [
+                AccountStatus.LOCATION_REJECTED,
+                AccountStatus.ACCOUNT_REJECTED,
+                AccountStatus.ACCOUNT_REJECTED_BY_GUARDIAN,
+                AccountStatus.GUARDIAN_APPROVAL_REQUIRED,
+            ]
+            if client.account_status in hard_blocks:
                 await client.close()
-                return {
-                    "success": True,
-                    "latency_ms": latency,
-                    "models": models,
-                    "message": f"Google Gemini 網頁版 Cookie 驗證成功！共偵測到 {len(models)} 個可用模型。"
-                }
-            else:
-                status_val = client.account_status.value if hasattr(client.account_status, "value") else client.account_status
-                status_reasons = {
-                    1016: "Cookie 無效或已過期，請重新開啟 gemini.google.com 取得最新 __Secure-1PSID (建議同時填寫 __Secure-1PSIDTS)。",
-                    1060: "所在地區受 Google Gemini 網頁服務限制，請在設定中填寫 Proxy 代理伺服器網址。",
-                    1014: "Google 服務暫時不可用，請稍後重試。"
-                }
-                msg = status_reasons.get(status_val, f"認證狀態異常 (代碼: {status_val})")
-                await client.close()
+                msg = "所在地區受 Google Gemini 網頁服務限制，請在設定中填寫 Proxy 代理伺服器網址。" if client.account_status == AccountStatus.LOCATION_REJECTED else f"此 Google 帳號受限 ({client.account_status.name})，無法使用 Gemini 網頁服務。"
                 return {
                     "success": False,
                     "latency_ms": latency,
                     "models": [],
-                    "message": f"Gemini 網頁版認證未通過: {msg}"
+                    "message": msg
                 }
+
+            models_list = client.list_models()
+            models = [getattr(m, "model_name", None) or getattr(m, "model_id", None) or str(m) for m in models_list] if models_list else DEFAULT_GEMINI_WEB_MODELS
+            models = [m for m in models if m and "argon" not in m.lower()]
+            if not models:
+                models = DEFAULT_GEMINI_WEB_MODELS
+            await client.close()
+            return {
+                "success": True,
+                "latency_ms": latency,
+                "models": models,
+                "message": f"Google Gemini 網頁版 Cookie 驗證成功！共偵測到 {len(models)} 個可用模型。"
+            }
         except Exception as e:
             return {
                 "success": False,
@@ -559,7 +568,8 @@ async def stream_gemini_webapi(
         return
 
     if not HAS_GEMINI_WEBAPI:
-        yield "❌ 系統尚未安裝 gemini-webapi 套件，請於終端機執行 `pip install gemini-webapi`！"
+        err_detail = f"（原因: {_GEMINI_WEBAPI_ERROR}）" if _GEMINI_WEBAPI_ERROR else ""
+        yield f"❌ 系統載入 gemini-webapi 套件失敗 {err_detail}，請於終端機執行 `pip install gemini-webapi`！"
         return
 
     # Extract context and format conversation prompt
@@ -598,20 +608,31 @@ async def stream_gemini_webapi(
         if secure_1psidcc:
             client._cookies.set("__Secure-1PSIDCC", secure_1psidcc.strip(), domain=".google.com", secure=True)
         await client.init()
-        if client.account_status != AccountStatus.AVAILABLE:
-            status_val = client.account_status.value if hasattr(client.account_status, "value") else client.account_status
-            if status_val == 1016:
-                yield "❌ Gemini 網頁版 Cookie 已失效或過期，請重新從 gemini.google.com 取得最新 `__Secure-1PSID` (建議同時填寫 `__Secure-1PSIDTS`)！"
-            elif status_val == 1060:
+        hard_blocks = [
+            AccountStatus.LOCATION_REJECTED,
+            AccountStatus.ACCOUNT_REJECTED,
+            AccountStatus.ACCOUNT_REJECTED_BY_GUARDIAN,
+            AccountStatus.GUARDIAN_APPROVAL_REQUIRED,
+        ]
+        if client.account_status in hard_blocks:
+            if client.account_status == AccountStatus.LOCATION_REJECTED:
                 yield "❌ 所在地區存取受限，請於設定中填入 Proxy 代理伺服器！"
             else:
-                yield f"❌ Gemini 網頁版認證失敗 (狀態碼: {status_val})，請檢查 Cookie 設定。"
+                yield f"❌ Gemini 帳號存取受限 ({client.account_status.name})，請檢查帳號狀態。"
+            await client.close()
             return
 
-        # 處理模型名稱：如果為預設、gemini-flash 或 gemini-argon，設為 None 讓 Google 自動選取預設可用模型
-        model_to_use = None
+        # 處理模型名稱：在 gemini-webapi 中，預設模型為 Model.BASIC_FLASH
+        model_to_use = GeminiWebModel.BASIC_FLASH
         if model and model not in ("default", "gemini-flash", "gemini-argon", ""):
-            model_to_use = model
+            try:
+                enum_key = model.upper().replace("-", "_")
+                if hasattr(GeminiWebModel, enum_key):
+                    model_to_use = getattr(GeminiWebModel, enum_key)
+                else:
+                    model_to_use = model
+            except Exception:
+                model_to_use = GeminiWebModel.BASIC_FLASH
         reasoning_active = False
 
         async for chunk in client.generate_content_stream(

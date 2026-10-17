@@ -8,6 +8,12 @@ import json
 import asyncio
 import cv2
 import numpy as np
+import enum
+if not hasattr(enum, "StrEnum"):
+    class StrEnum(str, enum.Enum):
+        pass
+    enum.StrEnum = StrEnum
+
 from gemini_webapi import GeminiClient
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -138,22 +144,52 @@ def chroma_key(raw_path: str, out_path: str, flip_horizontal: bool = True):
     bgra[:, :, :3] = np.clip(result_bgr, 0, 255).astype(np.uint8)
     bgra[:, :, 3] = (alpha * 255).astype(np.uint8)
 
-    # 裁切人物透明外圍並保留適度 padding
-    ys, xs = np.where(bgra[:, :, 3] > 10)
+    # 裁切人物透明外圍
+    ys, xs = np.where(bgra[:, :, 3] > 20)
     if len(ys) > 0:
-        pad = 35
-        min_y = max(0, np.min(ys) - pad)
-        max_y = min(h, np.max(ys) + pad)
-        min_x = max(0, np.min(xs) - pad)
-        max_x = min(w, np.max(xs) + pad)
-        bgra = bgra[min_y:max_y, min_x:max_x]
+        top_y, bot_y = np.min(ys), np.max(ys)
+        left_x, right_x = np.min(xs), np.max(xs)
+        bgra = bgra[top_y:bot_y, left_x:right_x]
 
     # 水平翻轉（讓角色朝右看，注視右側聊天視窗）
     if flip_horizontal:
         bgra = cv2.flip(bgra, 1)
 
-    cv2.imwrite(out_path, bgra)
-    print(f"  [去背成功 (朝右看)] {out_path} (尺寸: {bgra.shape[1]}x{bgra.shape[0]})")
+    # 統一標準化至 680x1530 畫布，保證情緒切換時人物高度與中軸完全穩定
+    target_w, target_h = 680, 1530
+    target_body_h = 1470
+    target_top_y = 35
+    target_axis_x = 326.0
+
+    cur_h, cur_w = bgra.shape[:2]
+    scale = target_body_h / float(cur_h)
+    new_w = int(round(cur_w * scale))
+    new_h = int(round(cur_h * scale))
+    resized = cv2.resize(bgra, (new_w, new_h), interpolation=cv2.INTER_LANCZOS4)
+
+    # 計算軀幹中軸
+    t_alpha = resized[:, :, 3]
+    torso_ys, torso_xs = np.where(t_alpha[int(new_h * 0.15):int(new_h * 0.55), :] > 50)
+    resized_axis_x = np.median(torso_xs) if len(torso_xs) > 0 else new_w / 2.0
+
+    offset_y = target_top_y
+    offset_x = int(round(target_axis_x - resized_axis_x))
+
+    canvas = np.zeros((target_h, target_w, 4), dtype=np.uint8)
+    src_x1 = max(0, -offset_x)
+    src_y1 = max(0, -offset_y)
+    src_x2 = min(new_w, target_w - offset_x)
+    src_y2 = min(new_h, target_h - offset_y)
+
+    dst_x1 = max(0, offset_x)
+    dst_y1 = max(0, offset_y)
+    dst_x2 = dst_x1 + (src_x2 - src_x1)
+    dst_y2 = dst_y1 + (src_y2 - src_y1)
+
+    canvas[dst_y1:dst_y2, dst_x1:dst_x2] = resized[src_y1:src_y2, src_x1:src_x2]
+
+    cv2.imwrite(out_path, canvas)
+    print(f"  [去背與規格標準化成功 (朝右看)] {out_path} (畫布尺寸: {canvas.shape[1]}x{canvas.shape[0]}, 身高: {target_body_h}px)")
 
 
 async def generate_all_tutor_sprites():

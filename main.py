@@ -1,3 +1,4 @@
+import socket
 import sys
 import time
 import argparse
@@ -17,6 +18,17 @@ if sys.stderr and hasattr(sys.stderr, "reconfigure"):
         sys.stderr.reconfigure(encoding="utf-8")
     except Exception:
         pass
+
+def get_local_ip() -> str:
+    """獲取本機在區域網路 (LAN) 中的 IPv4 位址"""
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return "127.0.0.1"
 
 def run_uvicorn(host: str, port: int, reload: bool = False):
     if reload:
@@ -38,21 +50,34 @@ def wait_for_server(url: str, timeout: float = 6.0):
 def main():
     parser = argparse.ArgumentParser(description="AI 智能對話助手 (AI Chat App)")
     parser.add_argument("--web-only", action="store_true", help="僅以網頁模式運行（不開啟桌面視窗）")
-    parser.add_argument("--host", default="127.0.0.1", help="綁定主機位址 (預設: 127.0.0.1)")
+    parser.add_argument("--lan", "--share", action="store_true", help="開放同數據機/區域網路設備連線 (自動監聽 0.0.0.0)")
+    parser.add_argument("--host", default="127.0.0.1", help="綁定主機位址 (預設: 127.0.0.1，若需開放區網可填 0.0.0.0)")
     parser.add_argument("--port", type=int, default=8000, help="服務連接埠 (預設: 8000)")
     args = parser.parse_args()
 
-    server_url = f"http://{args.host}:{args.port}"
+    bind_host = "0.0.0.0" if args.lan else args.host
+    is_lan_mode = (bind_host == "0.0.0.0")
+
+    # 本機桌面視窗與就緒測試使用 127.0.0.1 (避免 Windows 對 0.0.0.0 發送請求時拋出 WinError 10049)
+    local_access_host = "127.0.0.1" if bind_host in ("0.0.0.0", "") else bind_host
+    server_url = f"http://{local_access_host}:{args.port}"
+    lan_ip = get_local_ip()
+    lan_url = f"http://{lan_ip}:{args.port}"
 
     print("=" * 60)
     print("🚀 AI 智能對話助手啟動中...")
-    print(f"🌐 網頁測試網址: {server_url}")
+    print(f"🏠 本機視窗/網址: {server_url}")
+    if is_lan_mode:
+        print(f"📱 家人/區網連線: {lan_url}  (同數據機/Wi-Fi 手機或電腦皆可使用)")
+    else:
+        print(f"💡 目前僅限本機存取。若要讓同數據機家人使用，可加上 --lan 參數")
+        print(f"   (本機區網 IP: {lan_ip}，連線網址為 {lan_url})")
     print("=" * 60)
 
     if args.web_only:
         print("💡 目前以【純網頁模式 (自動熱重載)】運行，請在瀏覽器打開上述網址。")
         print("👉 按 Ctrl + C 可結束程式。")
-        run_uvicorn(args.host, args.port, reload=True)
+        run_uvicorn(bind_host, args.port, reload=True)
         return
 
     # Desktop Window Mode via pywebview
@@ -61,13 +86,13 @@ def main():
     except ImportError:
         print("⚠️ 未檢測到 pywebview 套件，自動切換至純網頁模式。")
         print("提示：若需開啟桌面視窗，請執行: pip install pywebview")
-        run_uvicorn(args.host, args.port)
+        run_uvicorn(bind_host, args.port)
         return
 
     # Start FastAPI server in a background thread
     server_thread = threading.Thread(
         target=run_uvicorn,
-        args=(args.host, args.port),
+        args=(bind_host, args.port),
         daemon=True
     )
     server_thread.start()

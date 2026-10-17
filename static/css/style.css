@@ -633,6 +633,25 @@ body {
   cursor: pointer;
 }
 
+.device-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: 20px;
+  font-size: 12px;
+  color: #34d399;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.device-indicator:hover {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: rgba(16, 185, 129, 0.5);
+}
+
 .indicator-dot {
   width: 7px;
   height: 7px;
@@ -939,7 +958,7 @@ body.is-resizing.resizing-row * {
   user-select: none;
   pointer-events: none;
   filter: drop-shadow(0 10px 25px rgba(0, 0, 0, 0.6));
-  transition: filter 0.3s ease;
+  transition: opacity 0.15s ease, filter 0.3s ease;
   /* 依使用者要求：設定圖片時完全靜止穩定，不晃動 */
   animation: none !important;
   transform: none;
@@ -4576,9 +4595,386 @@ body.is-resizing.resizing-row * {
   box-shadow: 0 0 3px rgba(74, 44, 19, 0.3);
 }
 
-.theme-book .thinking-label {
-  color: #3e240f;
-  letter-spacing: 0.4px;
+/* ===================================================
+   卿卿我我 (LoveyDovey) 模式角色設定設計師樣式
+   =================================================== */
+
+.modal-overlay.persona-mode .modal-card {
+  max-width: 820px !important;
+  width: 94% !important;
+  transition: all 0.25s ease;
 }
+
+#tab-persona {
+  display: none;
+  flex-direction: column;
+  gap: 18px;
+  padding-bottom: 24px;
+}
+
+#tab-persona.active {
+  display: flex;
+}
+
+/* 頂部標題 Banner */
+.lovey-header-banner {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.12), rgba(236, 72, 153, 0.08));
+  border: 1px solid rgba(168, 85, 247, 0.25);
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
+}
+
+.lovey-badge {
+  display: inline-block;
+  align-self: flex-start;
+  font-size: 11px;
+  font-weight: 600;
+  color: #f472b6;
+  background: rgba(244, 114, 182, 0.15);
+  border: 1px solid rgba(244, 114, 182, 0.35);
+  padding: 2px 10px;
+  border-radius: 12px;
+  letter-spacing: 0.5px;
+}
+
+.lovey-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+  letter-spacing: 0.3px;
+}
+
+.lovey-subtitle {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  line-height: 1.55;
+  margin: 0;
+}
+
+/* 角色選單與範本卡片 */
+.lovey-selector-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lovey-selector-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.lovey-select-group {
+  flex: 1;
+  min-width: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lovey-select-group label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.btn-lovey-new {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.3));
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  color: #93c5fd;
+  border-radius: 8px;
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-lovey-new:hover {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.35), rgba(37, 99, 235, 0.45));
+  border-color: #60a5fa;
+  transform: translateY(-1px);
+}
+
+.lovey-templates-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.templates-label {
+  font-size: 12px;
+  color: #a78bfa;
+  font-weight: 600;
+}
+
+.template-chips-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.template-chip {
+  background: rgba(168, 85, 247, 0.1);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  border-radius: 20px;
+  padding: 6px 13px;
+  font-size: 12px;
+  color: #d8b4fe;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.template-chip:hover {
+  background: rgba(168, 85, 247, 0.22);
+  border-color: #c084fc;
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(168, 85, 247, 0.2);
+}
+
+/* 分組卡片 */
+.lovey-section-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.lovey-section-card.highlight-card {
+  background: linear-gradient(180deg, rgba(236, 72, 153, 0.04), rgba(168, 85, 247, 0.03));
+  border: 1px solid rgba(236, 72, 153, 0.25);
+  box-shadow: 0 0 15px rgba(236, 72, 153, 0.06);
+}
+
+.lovey-section-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding-bottom: 8px;
+}
+
+.section-icon {
+  font-size: 16px;
+}
+
+.lovey-section-head h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f1f5f9;
+  margin: 0;
+  letter-spacing: 0.2px;
+}
+
+.lovey-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lovey-field-group label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #e2e8f0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.req-star {
+  font-size: 11px;
+  color: #f43f5e;
+  font-weight: 600;
+}
+
+.lovey-field-group input,
+.lovey-field-group textarea {
+  width: 100%;
+  padding: 9px 12px;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  color: #f8fafc;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+}
+
+.lovey-field-group input:focus,
+.lovey-field-group textarea:focus {
+  border-color: #a855f7;
+  box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.22);
+}
+
+/* 灰底說明與範例卡片 */
+.lovey-field-guide {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 9px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.guide-desc {
+  font-size: 12px;
+  color: #94a3b8;
+  line-height: 1.5;
+}
+
+.guide-desc strong {
+  color: #cbd5e1;
+}
+
+.guide-example {
+  background: rgba(0, 0, 0, 0.45);
+  border-left: 3px solid #a855f7;
+  border-radius: 4px;
+  padding: 7px 11px;
+  font-size: 12px;
+  color: #e2e8f0;
+  line-height: 1.55;
+  word-break: break-word;
+}
+
+.guide-example strong {
+  color: #c084fc;
+}
+
+/* 即時編譯 Prompt 預覽 */
+.lovey-prompt-preview {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.lovey-prompt-preview summary {
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #cbd5e1;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.02);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  user-select: none;
+}
+
+.lovey-prompt-preview summary:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+
+.accordion-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.lovey-prompt-body {
+  padding: 14px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.lovey-prompt-body textarea {
+  width: 100%;
+  background: rgba(10, 15, 29, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: #93c5fd;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  padding: 10px 12px;
+  box-sizing: border-box;
+}
+
+/* 底部操作按鈕列 */
+.lovey-actions-bar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding-top: 8px;
+}
+
+.lovey-actions-bar button {
+  padding: 10px 18px;
+  font-size: 13.5px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.lovey-actions-bar .btn-danger:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: #ef4444;
+}
+
+/* 第一聊天場景情境橫幅 (SillyTavern / LoveyDovey Scene Banner) */
+.lovey-scene-banner {
+  margin: 14px auto 10px auto;
+  padding: 8px 16px;
+  background: rgba(168, 85, 247, 0.08);
+  border: 1px dashed rgba(168, 85, 247, 0.35);
+  border-radius: 20px;
+  max-width: 88%;
+  font-size: 12px;
+  color: #c084fc;
+  line-height: 1.55;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.lovey-scene-banner .scene-tag {
+  background: rgba(168, 85, 247, 0.22);
+  color: #e9d5ff;
+  padding: 2px 9px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+
 
 

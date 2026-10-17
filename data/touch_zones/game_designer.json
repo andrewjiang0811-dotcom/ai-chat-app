@@ -1,35 +1,90 @@
 [
   {
-    "id": "head_touch",
-    "name": "頭部 (摸摸頭)",
+    "id": "hair_touch",
+    "name": "珊瑚橘高馬尾 / 呆毛 (摸摸頭)",
     "emotion": "happy",
-    "dialogue": "（被輕輕摸了摸頭）嘿嘿～好舒服喔，謝謝你！",
-    "x": 28,
-    "y": 6,
-    "width": 44,
-    "height": 22,
-    "priority": 1
+    "priority": 1,
+    "dialogue": "（高馬尾俏皮一晃，開朗地瞇眼笑起來）哇！摸摸頭會給予靈感 Buff 嗎？感覺腦海裡突然跳出三種全新的卡牌協同機制了！✨",
+    "x": 30,
+    "y": 2,
+    "width": 40,
+    "height": 11
   },
   {
     "id": "face_touch",
-    "name": "嘴部 / 臉頰 (捏捏臉)",
+    "name": "琥珀金瞳 / 軟軟臉頰 (捏捏臉)",
     "emotion": "shy",
-    "dialogue": "（臉頰泛起微紅）哇...！突然碰我的臉，好害羞喔...",
-    "x": 35,
-    "y": 28,
-    "width": 30,
-    "height": 18,
-    "priority": 2
+    "priority": 2,
+    "dialogue": "（臉頰泛起微紅，輕輕眨了眨大眼睛）等等...！捏臉可不在這次遊戲企劃的互動規格書裡喔...心跳數值都要超標了啦///",
+    "x": 36,
+    "y": 12,
+    "width": 28,
+    "height": 9
   },
   {
-    "id": "body_touch",
-    "name": "身體 / 手部 (牽牽手)",
+    "id": "badge_touch",
+    "name": "開發者名牌 / 獨立遊戲徽章 (輕碰識別證)",
     "emotion": "happy",
-    "dialogue": "（溫暖地握住你的手）我們一起繼續加油吧！",
-    "x": 25,
-    "y": 48,
-    "width": 50,
-    "height": 38,
-    "priority": 3
+    "priority": 3,
+    "dialogue": "（得意地挺起胸膛輕拍名牌）哼哼～胸前這些可都是在 Indie Game 展覽通關拿到的榮譽徽章！想聽聽它們背後的開發血淚史嗎？",
+    "x": 33,
+    "y": 22,
+    "width": 34,
+    "height": 13
+  },
+  {
+    "id": "card_touch",
+    "name": "立體全息遊戲卡牌 (觸碰發光卡)",
+    "emotion": "happy",
+    "priority": 4,
+    "dialogue": "（手中的全息卡牌泛起璀璨金光）小心！這可是 SSR 級的傳說連攜卡～打出時可以讓整個戰場觸發連鎖共鳴喔！要借你研究一下卡面效果嗎？✨",
+    "x": 10,
+    "y": 14,
+    "width": 30,
+    "height": 22
+  },
+  {
+    "id": "console_touch",
+    "name": "魔導掌上遊戲機 (一起連線對戰)",
+    "emotion": "surprised",
+    "priority": 5,
+    "dialogue": "（興奮地把掌機螢幕轉向你）看這個！我剛把 Rogue-lite 的遺物隨機詞綴實裝上去！要不要現在就來一局雙人同屏試玩？",
+    "x": 60,
+    "y": 44,
+    "width": 34,
+    "height": 18
+  },
+  {
+    "id": "dice_touch",
+    "name": "二十面骰 D20 束口袋 (擲骰判定)",
+    "emotion": "happy",
+    "priority": 6,
+    "dialogue": "（解開皮質束口拋起晶瑩的二十面骰）咔噠～投擲判定！Natural 20 大成功！看來今天無論做什麼樣的遊戲設計都會被幸運女神眷顧呢！🎲",
+    "x": 20,
+    "y": 44,
+    "width": 22,
+    "height": 14
+  },
+  {
+    "id": "skirt_touch",
+    "name": "百褶工裝短裙 (專注策劃)",
+    "emotion": "angry",
+    "priority": 7,
+    "dialogue": "（警覺地雙手護住裙擺，氣鼓鼓地嘟嘴）喂喂！戰鬥策劃師的防禦等級可是很高的！別把注意力放在奇怪的地方，專心看戰鬥數值迴圈啦！💢",
+    "x": 26,
+    "y": 50,
+    "width": 48,
+    "height": 16
+  },
+  {
+    "id": "boots_touch",
+    "name": "復古繫帶馬靴 / 長腿 (踏踏步)",
+    "emotion": "thinking",
+    "priority": 8,
+    "dialogue": "（靴跟在地面輕輕敲擊出節奏）踩出清脆的踏步聲～在關卡音效設計裡，腳步聲的空間衰減可是營造沉浸感（Immersion）的關鍵細節喔！",
+    "x": 30,
+    "y": 80,
+    "width": 40,
+    "height": 19
   }
 ]

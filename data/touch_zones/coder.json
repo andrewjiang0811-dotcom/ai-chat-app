@@ -1,35 +1,90 @@
 [
   {
     "id": "head_touch",
-    "name": "頭部 (摸摸頭)",
+    "name": "青藍挑染馬尾 / 頭部 (摸摸頭)",
     "emotion": "happy",
-    "dialogue": "（被輕輕摸了摸頭）嘿嘿～好舒服喔，謝謝你！",
+    "priority": 1,
+    "dialogue": "（被輕輕摸了摸挑染馬尾）哇...突然摸頭幹嘛啦，頭髮都要被你揉亂了...不過，感覺還挺放鬆的，謝啦！✨",
     "x": 28,
-    "y": 6,
-    "width": 44,
-    "height": 22,
-    "priority": 1
+    "y": 2,
+    "width": 40,
+    "height": 11
   },
   {
-    "id": "face_touch",
-    "name": "嘴部 / 臉頰 (捏捏臉)",
+    "id": "glasses_touch",
+    "name": "防藍光眼鏡 / 臉頰 (扶眼鏡 / 捏捏臉)",
     "emotion": "shy",
-    "dialogue": "（臉頰泛起微紅）哇...！突然碰我的臉，好害羞喔...",
+    "priority": 2,
+    "dialogue": "（臉頰微紅，輕按鏡框後退半步）等、等等...別摸眼鏡啦，鏡片沾上指紋看螢幕會反光的...而且靠太近了///",
     "x": 35,
-    "y": 28,
+    "y": 12,
     "width": 30,
-    "height": 18,
-    "priority": 2
+    "height": 9
   },
   {
-    "id": "body_touch",
-    "name": "身體 / 手部 (牽牽手)",
+    "id": "headphones_touch",
+    "name": "發光降噪耳機 (摘下耳機)",
+    "emotion": "surprised",
+    "priority": 3,
+    "dialogue": "（摘下單側微光耳機，轉頭露出好奇神情）嗯？耳機開著降噪沒注意到你走過來...怎麼了，遇到死結（Deadlock）解不開了嗎？",
+    "x": 32,
+    "y": 20,
+    "width": 36,
+    "height": 8
+  },
+  {
+    "id": "hoodie_touch",
+    "name": "科技帽T / 露指手套 (牽牽手)",
     "emotion": "happy",
-    "dialogue": "（溫暖地握住你的手）我們一起繼續加油吧！",
-    "x": 25,
+    "priority": 4,
+    "dialogue": "（反握住你的手，露指手套傳來微涼的手溫）手這麼暖和呀...剛好剛寫完幾百行 Code 手有點冰，借我暖一下吧～",
+    "x": 12,
+    "y": 32,
+    "width": 32,
+    "height": 14
+  },
+  {
+    "id": "keyboard_touch",
+    "name": "客製RGB機械鍵盤 (試敲軸體)",
+    "emotion": "happy",
+    "priority": 5,
+    "dialogue": "（開心地把鍵盤遞到你眼前）很懂嘛！這可是我手潤的客製化線性軸，敲擊手感超絲滑～想按按看按兩行代碼嗎？✨",
+    "x": 10,
+    "y": 42,
+    "width": 42,
+    "height": 16
+  },
+  {
+    "id": "skirt_touch",
+    "name": "工裝短裙 / 機能扣帶 (專心審查)",
+    "emotion": "angry",
+    "priority": 6,
+    "dialogue": "（警覺地壓下工裝裙擺，氣鼓鼓地嘟嘴）喂！目光該看的是螢幕上的 PR，別亂摸啦！直接扣你的 Code Review 分數喔！💢",
+    "x": 32,
     "y": 48,
-    "width": 50,
-    "height": 38,
-    "priority": 3
+    "width": 44,
+    "height": 12
+  },
+  {
+    "id": "stockings_touch",
+    "name": "黑透膚過膝長襪 (輕碰長腿)",
+    "emotion": "shy",
+    "priority": 7,
+    "dialogue": "（膝蓋微攏，別過臉小聲嘀咕）過膝襪是防辦公室冷氣吹膝蓋的好不好...盯著看很讓人害羞耶，笨蛋...///",
+    "x": 32,
+    "y": 62,
+    "width": 38,
+    "height": 24
+  },
+  {
+    "id": "sneakers_touch",
+    "name": "高筒科技球鞋 / 腳尖 (踩碎步)",
+    "emotion": "thinking",
+    "priority": 8,
+    "dialogue": "（低頭好奇看了看球鞋腳尖）球鞋鞋帶鬆了嗎？還是有地上掉線路？謝謝你的提醒～",
+    "x": 34,
+    "y": 86,
+    "width": 34,
+    "height": 12
   }
 ]

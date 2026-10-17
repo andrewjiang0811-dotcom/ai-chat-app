@@ -5,6 +5,7 @@ import sys
 
 import cv2
 import numpy as np
+import core.compat
 from gemini_webapi import GeminiClient
 from core.cookie_extractor import get_or_sync_gemini_cookies
 
